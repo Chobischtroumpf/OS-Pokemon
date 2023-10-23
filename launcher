@@ -1,0 +1,31 @@
+#!/bin/bash
+# pwd=$(pwd)
+
+# export PATH=$(pwd)/img:$PATH
+
+function interactive {
+    echo "hello"
+}
+
+function automatic {
+    echo "world"
+}
+
+if [ "$1" == "-i" ] || [ "$1" == "--interactive" ]; then
+    if [ $# != 2 ] || [ ! -f $2 ]; then
+        echo "incorrect amount of arguments or file does not exist"
+        exit 1
+    fi
+    interactive
+    exit
+elif [ "$1" == "-a" ] || [ "$1" == "--automatic" ]; then
+    if [ $# != 3 ] || [ ! -f $2 ] || [ ! -d $3 ]; then
+        echo "wrong amount of arguments"
+    fi
+    automatic
+    exit
+else
+    echo "Wrong argument."
+    exit 1
+fi
+
