@@ -1,0 +1,15 @@
+main
+
+créé les processus fils:
+    processus fils :
+        lire sur le fd pipe du parent
+        une fois un chemin reçu 
+            -> envoie dans img-dist
+        on recupere la valeur de retour de img-dist
+        si >= 65 erreur, retour case depart
+        si < 64, si dist < que dist precedente sauvegarde image
+
+
+une fois que le processus parent a fini de recevoir les
+chemins vers les images de la base de donnée.
+envoie
