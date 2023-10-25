@@ -8,8 +8,13 @@ créé les processus fils:
         on recupere la valeur de retour de img-dist
         si >= 65 erreur, retour case depart
         si < 64, si dist < que dist precedente sauvegarde image
-
-
-une fois que le processus parent a fini de recevoir les
-chemins vers les images de la base de donnée.
-envoie
+    processus parent :
+        boucle "infinie":
+            lis sur le stdin
+            Envoie chaque ligne reçue a un des processus enfants via un pipe
+            une fois qu'il recoit le symbole de fin (EOF aka '\0') 
+            envoie un signal aux processus enfants pour leurs indiquer qu'une fois
+            la comparaison de l'image actuelle est finie ils peuvent s'arreter.
+            recupere des processus enfants le chemin vers l'image avec la distance de hamming la plus basse.
+            print
+            exit
