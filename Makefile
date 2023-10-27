@@ -1,14 +1,34 @@
-CC=gcc
-OPT=-Wall -Wextra -O2 -Wpedantic
-OBJS=
+NAME = img-search
 
-all: img-search
+SRC_PATH = srcs/
 
-img-search: main.c $(OBJS)
-	$(CC) $(OPT) $(OPT) main.c utils.c -o img-search $(OBJS)
+SRC_NAME =	main.c	\
+			utils.c
 
-%.o: %.c %.h
-	$(CC) $(OPT) $(DBG_OPT) -c $< -o $@
+CC = gcc
+CFLAGS = -Wall -Wextra -std=c11 -O2 -Wpedantic
+SRC = $(addprefix $(SRC_PATH)/,$(SRC_NAME))
+OBJ = $(SRC:%.c=%.o)
+
+default:
+	@make -s all
+
+all: $(NAME)
+
+$(NAME): $(OBJ)
+	@$(CC) $(LDFLAGS) $(LDLIBS) $^ -o $@
+	@$(call update)
+
+.SILENT:clean
 
 clean:
-	rm -f img-search $(OBJS)
+	@rm -rf $(OBJ)
+
+fclean:
+	@rm -rf $(OBJ)
+	@rm -f $(NAME)
+
+re: 
+	@echo "img-search recompiling"
+	@make -s fclean 
+	@make -s all

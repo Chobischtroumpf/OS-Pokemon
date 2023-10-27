@@ -3,7 +3,7 @@
 void handle_error()
 {
    perror(strerror(errno));
-   exit(1);
+   exit(-1);
 }
 
 char		*ft_strtrim(char const *s1, char const *set)

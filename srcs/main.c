@@ -16,20 +16,34 @@ int exec_img_dist(char *baseimg, char *otherimg)
    pid = fork();
    if (pid == 0)
    {
-      printf("Child process\n");
-      printf(" args : %s %s", baseimg, otherimg);
       if (execlp("img-dist", "-v", baseimg, otherimg, NULL) == -1)
          handle_error();
    }
    else
    {
-      printf("Parent process\n");
       if (wait(&status) == -1)
          handle_error();
       if (WIFEXITED(status))
          return WEXITSTATUS(status);
    }
    return 65;
+}
+
+char *get_input()
+{
+   char *otherimg;
+   static char tmp[1000];
+   bzero(tmp, 1000);
+   if (fgets(tmp, 1000, stdin) == NULL)
+      return NULL;
+
+   otherimg = (char *)malloc(sizeof(char) * (strlen(tmp)-1));
+   if (otherimg == NULL)
+      handle_error();
+
+   memcpy(otherimg, tmp, strlen(tmp)-1);
+   otherimg[strlen(tmp)-1] = '\0';
+   return otherimg;
 }
 
 int main(int argc, char* argv[])
@@ -45,25 +59,16 @@ int main(int argc, char* argv[])
       return 1;
    }
 
-   char *otherimg = NULL;
    baseimg = ft_strdup(argv[1]);
    while(true)
    {
-      char tmp[1000];
-      bzero(tmp, 1000);
-      if (fgets(tmp, 1000, stdin) == NULL)
+      char *otherimg = get_input();
+      if (otherimg == NULL)
          break;
-
-      otherimg = (char *)malloc(sizeof(char) * (strlen(tmp)));
-      strncpy(otherimg, tmp, strlen(tmp)-1);
-      otherimg[strlen(tmp)-1] = '\0';
-      printf("You entered: %s\n", otherimg);
-      printf("current working directory: %s\n", getcwd(NULL, 0));
-
+      // compare images
       dist = exec_img_dist(baseimg, otherimg);
-      
-      printf("Distance: %d\n", dist);
-      
+
+      // update closest image
       if (dist < closest_dist)
       {
          if (closest_img != NULL)
