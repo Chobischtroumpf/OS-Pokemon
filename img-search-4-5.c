@@ -48,12 +48,12 @@ void fils(int fd_read, int num_img, char cmp, int *shared_memory){ //regarder si
 
     char img_path ;
 
-    for(int i=0; i<num_img; i++){      //comparaisons                // au lieu : while(num_img>0)
+    for(int i=0; i < num_img; i++){      //comparaisons                // au lieu : while(num_img>0)
         read(fd_read, &img_path, sizeof(MAX_PATH));
         val_dist = "./img-dist to_cmp img_path"; //adjacent... 
         sem_wait(&sem_memoire_partagee);  //add at père aussi durant lecture @fin
         if (val_dist < shared_memory[0]){
-            shared_memory[0] = val_dist;    
+            shared_memory[0] = val_dist;
         }
         sem_post(&sem_memoire_partagee);
     }
@@ -218,7 +218,7 @@ int main(int argc, char* argv[]){ //pour récupèrer le path
 
 /*QUESTIONS POUR ALESSANDRO :
 - les sémaphores pour les fils : le fils ne commence pas à exécuter le code tant que le pipe n'est pas plein
-- comment récupérer la distance ligne 58
+- comment récupérer la distance ligne 53
 - comment récupérer le path vers l'image qui a la distance la plus courte
 - signal(sigint, handler2) chez les fils pour qu'ils l'ignorent?
 */
