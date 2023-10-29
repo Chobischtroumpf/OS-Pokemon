@@ -30,7 +30,7 @@ int exec_img_dist(char *baseimg, char *otherimg)
    return 65;
 }
 
-char *get_input()
+char *get_input() // adapter pour lire sur file qu'on veut
 {
    char *otherimg;
    static char tmp[1000];
@@ -49,7 +49,7 @@ char *get_input()
 
 int main(int argc, char* argv[])
 {
-   char *baseimg;
+   // char *baseimg;
    char *closest_img = NULL;
    int closest_dist = 65;
    int dist;
@@ -60,7 +60,7 @@ int main(int argc, char* argv[])
       return 1;
    }
 
-   baseimg = ft_strdup(argv[1]);
+   // baseimg = ft_strdup(argv[1]);
    while(true)
    {
       char *otherimg = get_input();
@@ -82,6 +82,8 @@ int main(int argc, char* argv[])
       if (otherimg != NULL)
          free(otherimg);
    }
+
+
    if (closest_dist == 65)
       printf("No similar image found (no comparison could be performed successfully).\n");
    else

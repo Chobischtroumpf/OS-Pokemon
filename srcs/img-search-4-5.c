@@ -15,6 +15,8 @@
 //#include <stdbool.h>
 //#include <stdatomic.h>
 
+#include "utils.h"
+
 //rappel:
 //read = 0
 //write = 1
@@ -22,42 +24,97 @@
 //int dist = 65; //var partagée
 
 
-sem_t sem_memoire_partagee, vide1,vide2,plein1,plein2; // pour gérer var partagée, voir si pipes = vides ou non, doit avoir meilleure façon de determiner valeurs
+sem_t sem_memoire_partagee, vide1, vide2, plein1, plein2; // pour gérer var partagée, voir si pipes = vides ou non, doit avoir meilleure façon de determiner valeurs
 pthread_mutex_t mutex; //ou mutex plutot? (pour var partagée)
 const int MAX_PATH = 256;
 
+struct img_dist{
+    int dist;
+    char path[1000];
+} 
+typedef t_img_dist;
 
-
-void *create_shared_memory(size_t size) {
+void *create_shared_memory(size_t size){
     //Vient du cours TP5 ex4
     const int protection = PROT_READ | PROT_WRITE;
     const int visibility = MAP_SHARED | MAP_ANONYMOUS;
     return mmap(NULL, size, protection, visibility, -1, 0); //-> verifier parametres
 }
 
+char *get_input_fd(int fd){// adapter pour lire sur file qu'on veut
+    char *otherimg;
+    static char tmp[1000];
+    bzero(tmp, 1000);
 
+    if (read(fd, tmp, 1000) == -1)
+        handle_error();
 
-void fils(int fd_read, int num_img, char cmp, int *shared_memory){ //regarder si bien passé shared_memory
+    otherimg = (char *)malloc(sizeof(char) * (strlen(tmp)-1));
+    if (otherimg == NULL)
+        handle_error();
+
+    memcpy(otherimg, tmp, strlen(tmp)-1);
+    otherimg[strlen(tmp)-1] = '\0';
+    return otherimg;
+}
+
+int exec_img_dist(char *baseimg, char *otherimg){
+   pid_t pid;
+   int status;
+   
+
+   pid = fork();
+   if (pid == 0){
+      if (execlp("img-dist", "-v", baseimg, otherimg, NULL) == -1)
+         handle_error();
+   }
+   else{
+      if (wait(&status) == -1)
+         handle_error();
+      if (WIFEXITED(status))
+         return WEXITSTATUS(status);
+   }
+   return 65;
+}
+
+void fils(int fd_read, char *baseimg, t_img_dist *shared_memory){ //regarder si bien passé shared_memory
 
     //prend pipe (+img à comparer?), appelle img-dist, récupère val dist, si < qu'avant, sauvegarde @ mémoire partagée
     //=> les 3 processus pourraient acceder à même zone, du coup fils comparent w/ val en mémoire puis quand fini, père récup valeur?
     
-    int val_dist;
-    
-    //sem_wait(tant que c'est pas plein)
+    char *closest_img = NULL;
+    int closest_dist = 65;
+    int dist;
 
-    char img_path ;
+   while(true){
+        char *otherimg = get_input();
+        if (otherimg == NULL)
+            break;
+        // compare images
+        dist = exec_img_dist(baseimg, otherimg);
 
-    for(int i=0; i < num_img; i++){      //comparaisons                // au lieu : while(num_img>0)
-        read(fd_read, &img_path, sizeof(MAX_PATH));
-        val_dist = "./img-dist to_cmp img_path"; //adjacent... 
         sem_wait(&sem_memoire_partagee);  //add at père aussi durant lecture @fin
-        if (val_dist < shared_memory[0]){
-            shared_memory[0] = val_dist;
+        if (dist < shared_memory->dist){
+            shared_memory->dist = dist;
+            bzero(shared_memory->path, 1000);
+            strcpy(shared_memory->path, otherimg);
         }
         sem_post(&sem_memoire_partagee);
-    }
 
+      // update closest image
+        if (dist < closest_dist){
+            if (closest_img != NULL)
+                free(closest_img);
+            closest_dist = dist;
+            closest_img = ft_strdup(otherimg);
+            if (closest_img == NULL)
+                handle_error();
+        
+        if (otherimg != NULL)
+            free(otherimg);
+        }
+
+   }
     //sem_post(tant que c'est pas plein)?!!!!!!!!!
 }//end fils
 
@@ -99,10 +156,10 @@ int main(int argc, char* argv[]){ //pour récupèrer le path
 
     //if (argc<?){printf("No similar image found (no comparison could be performed successfully).");exit(0);}
 
-    int *shared_memory = create_shared_memory(sizeof(int)); //voir comment retourner path    
-    shared_memory[0]=65;
+    t_img_dist *shared_memory = (t_img_dist *)create_shared_memory(sizeof(t_img_dist)); //voir comment retourner path    
+    shared_memory->dist=65;
 
-    char to_cmp=argv[1] ; 
+    char *baseimg = ft_strdup(argv[1]);
 
     //VARIABLES PEUT-ÊTRE SUFFISENT??? car pipes pas partagés 
     sem_init(&vide1, 0, 0);
@@ -132,11 +189,11 @@ int main(int argc, char* argv[]){ //pour récupèrer le path
     if (pid1>0){ //code fils 1
         //signal(SIGINT,handler_sigint_fils);
         printf("ok1");
-        fils(fd_p_f1[0],plein_var1,to_cmp, shared_memory); //si init 0, peut-être passer par ref si veux décrementer? (voir fils) SI OUI: UTILISER SEMAPHORE PLUTOT
+        fils(fd_p_f1[0], baseimg, shared_memory); //si init 0, peut-être passer par ref si veux décrementer? (voir fils) SI OUI: UTILISER SEMAPHORE PLUTOT
     }
     else if (pid1==0){
-        signal(SIGINT,handler_sigint);
-        signal(SIGPIPE,handler_sigpipe); //pas écrit encore, si soucis: commentaire
+        signal(SIGINT, handler_sigint);
+        signal(SIGPIPE, handler_sigpipe); //pas écrit encore, si soucis: commentaire
         printf("processus père");
         
         pid2 = fork(); //creation fils 2
@@ -144,7 +201,7 @@ int main(int argc, char* argv[]){ //pour récupèrer le path
         if (pid2>0){ //code fils 2
             //signal(SIGINT,handler_sigint_fils);
             printf("ok2");
-            fils(fd_p_f2[0],plein_var2,to_cmp, shared_memory);
+            fils(fd_p_f2[0], baseimg, shared_memory);
         }
 
         else if (pid2<0){ //erreur creation fils 2
@@ -163,7 +220,7 @@ int main(int argc, char* argv[]){ //pour récupèrer le path
             close(fd_p_f1[0]);
             close(fd_p_f2[0]);
             close(fd_p_f2[1]);
-            write(fd_p_f1[1],&recup_fgets,sizeof(recup_fgets));
+            write(fd_p_f1[1], &recup_fgets, sizeof(recup_fgets));
             close(fd_p_f1[1]);
             plein_var1 ++;
             }
@@ -172,7 +229,7 @@ int main(int argc, char* argv[]){ //pour récupèrer le path
             close(fd_p_f1[0]);
             close(fd_p_f2[0]);
             close(fd_p_f1[1]);
-            write(fd_p_f2[1],&recup_fgets,sizeof(recup_fgets));
+            write(fd_p_f2[1], &recup_fgets, sizeof(recup_fgets));
             close(fd_p_f2[1]);
             plein_var2 ++;
             }

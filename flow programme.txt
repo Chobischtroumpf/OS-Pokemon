@@ -18,3 +18,7 @@ créé les processus fils:
             recupere des processus enfants le chemin vers l'image avec la distance de hamming la plus basse.
             print
             exit
+
+
+
+-> 
