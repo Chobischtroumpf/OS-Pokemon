@@ -1,0 +1,30 @@
+srcs//img-search-4-5.c: In function ‘create_shared_memory’:
+srcs//img-search-4-5.c:23:41: error: ‘MAP_ANONYMOUS’ undeclared (first use in this function)
+   23 |     const int visibility = MAP_SHARED | MAP_ANONYMOUS;
+      |                                         ^~~~~~~~~~~~~
+srcs//img-search-4-5.c:23:41: note: each undeclared identifier is reported only once for each function it appears in
+srcs//img-search-4-5.c: In function ‘main’:
+srcs//img-search-4-5.c:158:17: warning: implicit declaration of function ‘kill’ [-Wimplicit-function-declaration]
+  158 |                 kill(pid1, SIGUSR1); // le code pour envoyer un signal au process enfant doit etre ici
+      |                 ^~~~
+srcs//img-search-4-5.c:188:26: warning: assignment to ‘char’ from ‘char *’ makes integer from pointer without a cast [-Wint-conversion]
+  188 |                 ret_path = shared_memory->path;
+      |                          ^
+srcs//img-search-4-5.c:198:20: warning: passing argument 1 of ‘perror’ makes pointer from integer without a cast [-Wint-conversion]
+  198 |             perror(errno);
+      |                    ^~~~~
+      |                    |
+      |                    int
+In file included from srcs//utils.h:4,
+                 from srcs//img-search-4-5.c:9:
+/usr/include/stdio.h:804:33: note: expected ‘const char *’ but argument is of type ‘int’
+  804 | extern void perror (const char *__s);
+      |                     ~~~~~~~~~~~~^~~
+srcs//img-search-4-5.c:204:48: warning: format ‘%s’ expects argument of type ‘char *’, but argument 2 has type ‘int’ [-Wformat=]
+  204 |             printf("Most similar image found: %s with a distance of %d.", ret_path, ret_val);
+      |                                               ~^                          ~~~~~~~~
+      |                                                |                          |
+      |                                                char *                     int
+      |                                               %d
+make[1]: *** [<builtin>: srcs//img-search-4-5.o] Error 1
+make: *** [Makefile:14: default] Error 2

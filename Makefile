@@ -3,8 +3,8 @@ NAME = img-search
 SRC_PATH = srcs
 
 SRC_NAME =	img-search-4-5.c	\
-			utils.c				\
-			get_next_line.c
+			get_next_line.c		\
+			utils.c
 
 CC = gcc
 CFLAGS = -Wall -Wextra -std=c11 -O2 -Wpedantic
