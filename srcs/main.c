@@ -1,7 +1,7 @@
 /*
 **
 ** Projet 1 du cours de systèmes d'exploitation informatiques
-** Auteurs : Alessandro Dorigo, Nha Thy Truong, Danae Veyret
+** Auteurs : Alessandro Dorigo, Nha Truong, Danae Veyret
 ** fichier : main.c
 **
 */

@@ -1,12 +1,11 @@
 #include "utils.h"
 
-void handle_error(int pipe[2], FILE *fstream, char *baseimg, char *otherimg)
+void    handle_error(int pipe[2], char *baseimg, char *otherimg)
 {
     if (pipe != NULL){
         close(pipe[0]);
         close(pipe[1]);
     }
-    if (fstream != NULL){fclose(fstream);}
     if (baseimg != NULL){free(baseimg);}
     if (baseimg != NULL){free(otherimg);}
     perror(strerror(errno));

@@ -1,9 +1,10 @@
 NAME = img-search
 
-SRC_PATH = srcs/
+SRC_PATH = srcs
 
-SRC_NAME =	main.c	\
-			utils.c
+SRC_NAME =	img-search-4-5.c	\
+			utils.c				\
+			get_next_line.c
 
 CC = gcc
 CFLAGS = -Wall -Wextra -std=c11 -O2 -Wpedantic

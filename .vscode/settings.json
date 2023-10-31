@@ -1,6 +1,11 @@
 {
     "files.associations": {
         "utils.h": "c",
-        "types.h": "c"
+        "types.h": "c",
+        "string.h": "c",
+        "stdbool.h": "c",
+        "wait.h": "c",
+        "signal.h": "c",
+        "strings.h": "c"
     }
 }

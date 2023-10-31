@@ -9,50 +9,34 @@
 #include "utils.h"
 
 sem_t sem_memoire_partagee; // pour gérer var partagée, voir si pipes = vides ou non, doit avoir meilleure façon de determiner valeurs
-const int MAX_PATH = 256;
+// const int MAX_PATH = 256;
+sig_atomic_t sigint = false;
 
-struct img_dist{
+typedef struct img_dist{
     int dist;
     char path[1000];
-} 
-typedef t_img_dist;
+} t_img_dist;
 
 void *create_shared_memory(size_t size){
     //Vient du cours TP5 ex4
+
     const int protection = PROT_READ | PROT_WRITE;
     const int visibility = MAP_SHARED | MAP_ANONYMOUS;
     return mmap(NULL, size, protection, visibility, -1, 0); //-> verifier parametres
 }// end create_shared_memory
 
-char *get_input_file(FILE *inputdes, int pipe[2]){
-    char *otherimg = NULL;
-    static char tmp[1000];
-    bzero(tmp, 1000);
-
-    if (fgets(tmp, 1000, inputdes) == -1){handle_error(pipe, inputdes, NULL, NULL);}
-
-    otherimg = (char *)malloc(sizeof(char) * (strlen(tmp)-1));
-    if (otherimg == NULL){handle_error(pipe, inputdes, NULL, NULL);}
-
-    memcpy(otherimg, tmp, strlen(tmp)-1);
-    otherimg[strlen(tmp)-1] = '\0';
-    return otherimg;
-}//  end get_input_file
-
-int exec_img_dist(char *baseimg, char *otherimg, int pipes[2], FILE *inputdes){
+int exec_img_dist(char *baseimg, char *otherimg, int pipes[2]){
     pid_t pid;
     int status;
 
     pid = fork();
     if (pid == 0){
         if (execlp("img-dist", "-v", baseimg, otherimg, NULL) == -1)
-            handle_error(pipes,inputdes,baseimg,otherimg);
+            handle_error(pipes,baseimg,otherimg);
     }
     else{
-        if (wait(&status) == -1){handle_error(pipes,inputdes,baseimg,otherimg);}
-            
+        if (wait(&status) == -1){handle_error(pipes,baseimg,otherimg);}
         if (WIFEXITED(status)){return WEXITSTATUS(status);}
-            
     }
     return 65;
 }// end exec_img_dist
@@ -61,16 +45,16 @@ void fils(int fd_pipe[2], char *baseimg, t_img_dist *shared_memory){ //regarder 
 
     //prend pipe (+img à comparer?), appelle img-dist, récupère val dist, si < qu'avant, sauvegarde @ mémoire partagée
     //=> les 3 processus pourraient acceder à même zone, du coup fils comparent w/ val en mémoire puis quand fini, père récup valeur?
- 
     int dist;
-    FILE *fd_read = fdopen(fd_pipe[0], "r");
 
     while(true){
-        char *otherimg = get_input_file(fd_read);
-        if (otherimg == NULL){break;}
+        char *otherimg = get_next_line(fd_pipe[0]);
+        if (otherimg == NULL){
+            handle_error(fd_pipe, baseimg, NULL);
+        }
             
         // compare images
-        dist = exec_img_dist(baseimg, otherimg);
+        dist = exec_img_dist(baseimg, otherimg, fd_pipe);
 
         // update closest image
         sem_wait(&sem_memoire_partagee);  //add at père aussi durant lecture @fin
@@ -84,7 +68,6 @@ void fils(int fd_pipe[2], char *baseimg, t_img_dist *shared_memory){ //regarder 
         if (otherimg != NULL){free(otherimg);}
 
     }
-    fclose(fd_read);
     close(fd_pipe[0]);
     close(fd_pipe[1]);
     exit(0);
@@ -168,23 +151,25 @@ int main(int argc, char* argv[]){ //pour récupèrer le path
         //collectione imgs stdin , envoie première @ fils1, deuxiè:e @f2, 3ème @f1 etc
 
         int counter =0;
-        char recup_fgets;
 
-        while (fgets(&recup_fgets, 256, stdin)){    //à voir 256
-            if (counter%2==0){
-            close(pipe_fils1[0]);
-            close(pipe_fils2[0]);
-            close(pipe_fils2[1]);
-            write(pipe_fils1[1], &recup_fgets, sizeof(recup_fgets));
-            close(pipe_fils1[1]);
+        while (true){    //à voir 256
+            char *input;
+            if (sigint == true)
+            {
+                kill(pid1, SIGUSR1); // le code pour envoyer un signal au process enfant doit etre ici
+            }
+            input = get_next_line(STDIN_FILENO);
+            if (input == NULL){
+                perror(strerror(errno));
+                exit(1);
+            }
+            if(counter%2==0){
+                write(pipe_fils1[1], &input, sizeof(input));
             }
             else{
-            close(pipe_fils1[0]);
-            close(pipe_fils2[0]);
-            close(pipe_fils1[1]);
-            write(pipe_fils2[1], &recup_fgets, sizeof(recup_fgets));
-            close(pipe_fils2[1]);
+                write(pipe_fils2[1], &input, sizeof(input));
             }
+            free(input);
             counter++;
         }//end while
         
@@ -211,7 +196,7 @@ int main(int argc, char* argv[]){ //pour récupèrer le path
         }
         else
         {
-            perror(errno);
+            perror(strerror(errno));
         }//end wait
         
 
