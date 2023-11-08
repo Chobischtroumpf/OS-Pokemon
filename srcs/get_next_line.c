@@ -1,58 +1,88 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   get_next_line.c                                    :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: adorigo <adorigo@student.s19.be>           +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2019/10/21 14:54:16 by adorigo           #+#    #+#             */
+/*   Updated: 2020/03/09 13:22:52 by adorigo          ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "utils.h"
 
-void	*resize(char **arr, size_t old_len, size_t new_len)
+int	ft_strchr_pos(const char *s, int c)
 {
-	char	*new_arr;
-	size_t	i;
+    int pos;
 
-	new_arr = malloc(sizeof(char) *  new_len + 1);
-	if (new_arr == NULL)
-		return (NULL);
-	i = 0;
-	while (i < old_len)
-	{
-		new_arr[i] = (*arr)[i];
-		i++;
-	}
-	free(*arr);
-	(*arr) = new_arr;
-	return (new_arr);
+    pos = 0;
+    while (s && s[pos])
+    {
+        if (s[pos] == c)
+            return (pos);
+        pos++;
+    }
+    if (s && s[pos] == c)
+        return (pos);
+    return (-1);
 }
 
-char	*get_next_line(int fd)
+char	*ft_strjoin_to_eol(char *s1, char *buf)
 {
-	char	ch;
-	char	*buff;
-	size_t	buff_size;
-	size_t	chars_read;
-	int		read_return;
+    char	*tab;
+    int		i;
+    int		j;
 
-	if (fd < 0)
-		return (NULL);
-	buff_size = 1000;
-	buff = malloc(sizeof(char) *  buff_size + 1);
-	if (buff == NULL)
-		return (NULL);
-	chars_read = 0;
-	ch = 0;
-	read_return = read(fd, &ch, 1);
-	if (read_return <= 0)
-	{
-		free(buff);
-		return (NULL);
-	}
-	while (read_return > 0 && ch != '\n')
-	{
-		buff[chars_read] = ch;
-		chars_read++;
-		if (chars_read >= buff_size)
-		{
-			resize(&buff, buff_size, buff_size * 2);
-			buff_size *= 2;
-		}
-		read_return = read(fd, &ch, 1);
-	}
-	if (read_return > 0 && ch == '\n')
-		buff[chars_read] = ch;
-	return (buff);
+    i = 0;
+    j = 0;
+    while (s1 && s1[i] && s1[i] != '\n')
+        i++;
+    while (buf && buf[j] && buf[j] != '\n')
+        j++;
+    if (!(tab = malloc(i + j + 1)))
+        return (NULL);
+    i = 0;
+    j = 0;
+    while (s1 && s1[j])
+        tab[i++] = s1[j++];
+    while (buf && *buf && *buf != '\n')
+        tab[i++] = *buf++;
+    tab[i] = 0;
+    free(s1);
+    return (tab);
+}
+
+int get_next_line(int fd, char **line)
+{
+    static char		buf[FOPEN_MAX][BUFFER_SIZE + 1];
+    int				ret;
+    int				i;
+
+    if (BUFFER_SIZE < 1 || fd < 0 || fd >= FOPEN_MAX || !line
+                    || !(*line = ft_strjoin_to_eol(NULL, buf[fd])))
+        return (-1);
+    ret = 1;
+    while (strchr(buf[fd], '\n') == NULL && ret)
+    {
+        ret = read(fd, buf[fd], BUFFER_SIZE);
+        if (ret == -1 && errno != EINTR)
+            return (-1);
+        else if (ret == -1 && errno == EINTR)
+        {
+            if (flag & FLAG_PIPE || flag & FLAG_TERM || flag & FLAG_INT)
+                return (-2);
+        }
+        buf[fd][ret] = '\0';
+        if (!(*line = ft_strjoin_to_eol(*line, buf[fd])))
+            return (-1);
+    }
+    i = 0;
+    ret = ft_strchr_pos(buf[fd], '\n') + 1;
+    if (buf[fd][0] == 0)
+        return (0);
+    while (buf[fd][ret] != '\0' && ret)
+        buf[fd][i++] = buf[fd][ret++];
+    buf[fd][i] = '\0';
+    return (1);
 }

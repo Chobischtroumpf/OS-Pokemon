@@ -1,6 +1,4 @@
-#ifndef UTILS_H_
-# define UTILS_H_
-
+#pragma once
 # include <stdio.h>
 # include <errno.h>
 # include <stdlib.h>
@@ -15,25 +13,34 @@
 # include <sys/types.h>
 # include <semaphore.h>
 
+#ifndef BUFFER_SIZE
+# define BUFFER_SIZE 1000
+#endif
+
+#define FLAG_TERM 0x01
+#define FLAG_PIPE 0x02
+#define FLAG_INT 0x04
+#define ERR_PIPE "Error: got SIGPIPE"
+#define ERR_TERM "Error: got SIGTERM"
+#define ERR_INT "Error: got SIGINT"
+#define ERR_GNL "Error: GNL :"
+#define ERR_EID "Error: exec_img_dist :"
+#define ERR_SSM "Error: set_shared_memory :"
+#define ERR_FORK "Error: fork :"
+#define ERR_WRITE "Error: write :"
+
 typedef struct img_dist{
     int dist;
     char path[1000];
 } t_img_dist;
 
-
+extern int flag;
 extern sem_t sem_memoire_partagee;
-extern sig_atomic_t sigint = false;
-extern sig_atomic_t sigterm = false;
-extern sig_atomic_t sigusr1 = false;
-extern sig_atomic_t sigusr2 = false;
-extern sig_atomic_t sigpipe = false;
 
-
-void    handle_error(int pipe[2], char *baseimg, char *otherimg);
 
 char    *ft_strdup(const char *src);
-char    *strjoin(char const *s1, char const *s2);
 char    *ft_strtrim(char const *s1, char const *set);
-char	*get_next_line(int fd);
+void    handle_error(pid_t child1, pid_t child2, int read_child1, int write_child1, int read_child2, int write_child2, char *baseimg, t_img_dist *shared_mem);
+int     get_next_line(int fd, char **line);
 
-#endif /* !UTILS_H_ */
+// #endif /* !UTILS_H_ */

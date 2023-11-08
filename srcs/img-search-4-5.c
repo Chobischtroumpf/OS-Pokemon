@@ -1,273 +1,336 @@
-/*
-**
-** Projet 1 du cours de systèmes d'exploitation informatiques
-** Auteurs : Alessandro Dorigo, Nha Thy Truong, Danae Veyret
-** fichier : main.c
-**
-*/
+    /*
+    **
+    ** Projet 1 du cours de systèmes d'exploitation informatiques
+    ** Auteurs : Alessandro Dorigo, Nha Truong, Danae Veyret
+    ** fichier : main.c
+    **
+    */
 
 #include "utils.h"
 
-t_img_dist *create_shared_memory(size_t size){
+sem_t sem_memoire_partagee;
+int flag = 0;
 
+
+t_img_dist  *create_shared_memory(size_t size)
+{
     t_img_dist *shared_memory;
-    
-    //create shared memory
+
     const int protection = PROT_READ | PROT_WRITE;
     const int visibility = MAP_SHARED | MAP_ANONYMOUS;
     shared_memory = (t_img_dist*)mmap(NULL, size, protection, visibility, -1, 0);
-    if ((void *)shared_memory == MAP_FAILED){
-        handle_error(NULL, NULL, NULL);
-    }
-
-    //init shared memory
+    if ((void *)shared_memory == MAP_FAILED)
+        return NULL;
     shared_memory->dist=65;
     bzero(shared_memory->path, 1000);
 
     return shared_memory;
+}
 
-}// end create_shared_memory
+int         set_shared_memory(t_img_dist *shared_mem, int dist, char *path)
+{
+    if (sem_wait(&sem_memoire_partagee) == -1)
+        return (-1);
+    if (dist < shared_mem->dist)
+    {
+        shared_mem->dist = dist;
+        bzero(shared_mem->path, 1000);
+        memmove(shared_mem->path, path, strlen(path));
+    }
+    if (sem_post(&sem_memoire_partagee) == -1)
+        return (-1);
+    return 0;
+}
 
-int exec_img_dist(char *baseimg, char *otherimg, int pipes[2]){
+void        sig_handler(int signum)
+{
+    if(signum == SIGTERM)
+    {
+        flag |= FLAG_TERM;
+        printf("SIGTERM\n");
+    }
+    else if(signum == SIGPIPE)
+    {
+        flag |= FLAG_PIPE;
+        printf("SIGPIPE\n");
+    }
+    else if(signum == SIGINT)
+    {
+        flag |= FLAG_INT;
+        printf("SIGINT\n");
+    }
+}
+
+void        sig_err_msg(char *msg)
+{
+    if (msg != NULL)
+        perror(msg);
+    if (flag & FLAG_PIPE){
+        perror(ERR_PIPE);
+    } else if (flag & FLAG_TERM) {
+        perror(ERR_TERM);
+    } else if (flag & FLAG_INT) {
+        perror(ERR_INT);
+    }
+}
+
+int         exec_img_dist(char *baseimg, char *otherimg)
+{
     pid_t pid;
     int status;
-    int ret_val = 65;
-
-    pid = fork();
-    if (pid == 0){
-        if (execlp("img-dist", "-v", baseimg, otherimg, NULL) == -1)
-            handle_error(pipes,baseimg,otherimg);
-    }
-    else
-    {
-        if (wait(&status) == -1)
-            handle_error(pipes,baseimg,otherimg);
-        if (WIFEXITED(status))
-            ret_val = WEXITSTATUS(status);
-    }
-    return 65;
-}// end exec_img_dist
-
-void fils(int fd_pipe[2], char *baseimg, t_img_dist *shared_memory)
-{
-    int dist;
-
-    while(true){
-        char *otherimg = get_next_line(fd_pipe[0]);
-        if (otherimg == NULL){
-            handle_error(fd_pipe, baseimg, NULL);
-        }
-            
-        // compare images
-        dist = exec_img_dist(baseimg, otherimg, fd_pipe);
-
-        // update closest image
-        sem_wait(&sem_memoire_partagee);  //add at père aussi durant lecture @fin
-        if (dist < shared_memory->dist){
-            shared_memory->dist = dist;
-            bzero(shared_memory->path, 1000);
-            strcpy(shared_memory->path, otherimg);
-        }
-        sem_post(&sem_memoire_partagee);
-
-        if (otherimg != NULL)
-        {
-            free(otherimg);
-        }
-
-    }
-    close(fd_pipe[0]);
-    close(fd_pipe[1]);
-    exit(0);
-}
-
-void pipe_create(int pipe1[2], int pipe2[2]){
-    int ret1;
-    int ret2;
-
-    ret1 = pipe(pipe1);
-    ret2 = pipe(pipe2);
-
-    if (ret1 == -1 || ret2 == -1){
-        perror(strerror(errno));
-        exit(1);
-    }
-}
-
-pid_t start_son(int pipe[2], char *baseimg, t_img_dist  *shared_memory)
-{
-    pid_t   pid;
+    int ret = 65; 
 
     pid = fork();
     if (pid == 0)
-        fils(pipe, baseimg, shared_memory);
-    else if (pid < 0)
-        return ((pid_t)-1);
-    return pid;
+    {
+        if (execlp("img-dist", "img-dist", baseimg, otherimg, NULL) == -1){
+            perror(strerror(errno));
+            return (-1);
+        }
+    }
+    else
+    {
+        if (waitpid(pid, &status, 0) == -1){
+            kill(pid, SIGTERM);
+            waitpid(pid, NULL, 0);
+            if (errno == EINTR && (flag & FLAG_TERM || flag & FLAG_PIPE || flag & FLAG_INT))
+                return (-2);
+            else
+                return (-1);
+        }
+        if (WIFEXITED(status))
+            ret = WEXITSTATUS(status);
+        if (WIFSIGNALED(status))
+            ret = 65;
+    }
+    return ret;
 }
 
-int main(int argc, char* argv[])
+void        fils(char *baseimg, int pipe[2], t_img_dist *shared_mem)
 {
-    t_img_dist  *shared_memory;
-    char        *baseimg;
-    int         pipe_fils1[2];
-    int         pipe_fils2[2]; // creation pipes 
-    pid_t       pid1;
-    pid_t       pid2;
+    char *otherimg;
+    int tempval;
+    int ret = 0;
+    bool cont = true;
 
-    if (argc != 2){
+    signal(SIGTERM, sig_handler);
+    signal(SIGPIPE, sig_handler);
+    signal(SIGINT, SIG_IGN);
+
+    close(pipe[1]);
+    while(cont)
+    {
+        if (flag & FLAG_TERM || flag & FLAG_PIPE || flag & FLAG_INT)
+            break;
+        tempval = get_next_line(pipe[0], &otherimg);    
+        if (tempval == -2){
+            sig_err_msg(ERR_GNL);
+            ret = -2;
+            break;
+        } else if (tempval == -1){
+            perror(ERR_GNL);
+            perror(strerror(errno));
+            ret = -1;
+            break;
+        } else if (tempval == 0){
+            cont = false;
+        }
+
+        tempval = exec_img_dist(baseimg, otherimg);
+        if (tempval == -2)
+        {
+            sig_err_msg(ERR_EID);
+            ret = -2;
+            break;
+        } else if (tempval == -1){
+            perror(ERR_EID);
+            perror(strerror(errno));
+            ret = -1;
+            break;
+        }
+
+        if (set_shared_memory(shared_mem, tempval, otherimg) == -1)
+        {
+            sig_err_msg(ERR_SSM);
+            ret = -1;
+            break;
+        }
+
+        free(otherimg);
+    }
+    if (ret < 0)
+        free(otherimg);
+    free(baseimg);
+    exit(ret);
+}
+
+int         send_path(char *otherimg, int pipe[2])
+{
+    if (write(pipe[1], otherimg, strlen(otherimg)) == -1)
+    {
+        perror(ERR_WRITE);
+        if (errno == EINTR)
+            return (-2);
+        else
+            return (-1);
+    }
+    if (write(pipe[1], "\n", 1) == -1)
+    {
+        perror(ERR_WRITE);
+        if (errno == EINTR)
+            return (-2);
+        else
+            return (-1);
+    }
+    return 0;
+}
+
+int         loop(int pipe1[2], int pipe2[2], pid_t pid1, pid_t pid2)
+{
+    char *otherimg;
+    bool first = true;
+    bool cont = true;
+    int ret;
+
+    while(cont)
+    {
+        if (flag & FLAG_INT)
+        {
+            kill(pid1, SIGTERM);
+            kill(pid2, SIGTERM);
+            return (-1);
+        }
+        ret = get_next_line(0, &otherimg);
+        if (ret == -2) {
+            perror(ERR_GNL);
+            free(otherimg);
+            return (-2);
+        } else if (ret == -1) {
+            perror(ERR_GNL);
+            free(otherimg);
+            return (-1);
+        } else if (ret == 0) {
+            cont = false;
+        }
+
+        if (first) {
+            ret = send_path(otherimg, pipe1);
+            first = false;
+        } else {
+            ret = send_path(otherimg, pipe2);
+            first = true;
+        }
+
+        free(otherimg);
+
+        if (ret < 0)
+            return (ret);
+    }
+    return 0;
+}
+
+int         main(int argc, char* argv[])
+{
+    char *baseimg;
+    t_img_dist *shared_mem;
+
+    signal(SIGTERM, sig_handler);
+    signal(SIGPIPE, sig_handler);
+    signal(SIGINT, sig_handler);
+
+    if (argc != 2)
+    {
         printf("Usage: %s <path to file>\n", argv[0]);
         return 1;
     }
-
-    start_parent_signal_handler();
-    shared_memory = create_shared_memory(sizeof(t_img_dist));
     baseimg = ft_strdup(argv[1]);
-    pipe_create(pipe_fils1, pipe_fils2);
-    printf("pipes : %d %d %d %d\n", pipe_fils1[0], pipe_fils1[1], pipe_fils2[0], pipe_fils2[1]);
+    if (baseimg == NULL)
+        return (-1);
 
-    if (((pid1 = start_son(pipe_fils1, baseimg, shared_memory)) != -1) &&
-        ((pid2 = start_son(pipe_fils2, baseimg, shared_memory)) != -1))
+    if (sem_init(&sem_memoire_partagee, 1, 1) == -1)
     {
-        close(pipe_fils1[0]);
-        close(pipe_fils2[0]);
-        close(pipe_fils1[1]);
-        close(pipe_fils2[1]);
-        if (pid1 > 0)
-            kill(pid1, SIGTERM);
-        if (pid2 > 0)
-            kill(pid2, SIGTERM);
-        //desalouer la memoire paratagée
-        handle_error(NULL, baseimg, NULL);
+        free(baseimg);
+        perror(strerror(errno));
+        return (-1);
     }
+
+    shared_mem = create_shared_memory(sizeof(t_img_dist));
+
+    if (shared_mem == NULL)
+    {
+        free(baseimg);
+        sem_destroy(&sem_memoire_partagee);
+        perror(strerror(errno));
+        return (-1);
+    }
+
+    int pipes1[2];
+    int pipes2[2];
+
+    if (pipe(pipes1) == -1){
+        perror(ERR_PIPE);
+        handle_error(-1, -1, -1, -1, -1, -1, baseimg, shared_mem);
+        return (-1);
+    }
+    if (pipe(pipes2) == -1){
+        perror(ERR_PIPE);
+        handle_error(-1, -1, pipes1[0], pipes1[1], -1, -1, baseimg, shared_mem);
+        return (-1);
+    }
+    pid_t pid1 = fork();
+
+    if (pid1 == 0)
+    {
+        close(pipes2[0]);
+        close(pipes2[1]);
+        fils(baseimg, pipes1, shared_mem);
+    }
+    else if (pid1 == -1)
+    {
+        perror(ERR_FORK);
+        handle_error(-1, -1, pipes1[0], pipes1[1], pipes2[0], pipes2[1], baseimg, shared_mem);
+        return (-1);
+    }
+
+    pid_t pid2 = fork();
+
+    if (pid2 == 0) {
+        close(pipes1[0]);
+        close(pipes1[1]);
+        fils(baseimg, pipes2, shared_mem);
+    } else if (pid2 == -1) {
+        perror(ERR_FORK);
+        handle_error(pid1, -1, pipes1[0], pipes1[1], pipes2[0], pipes2[1], baseimg, shared_mem);
+        return (-1);
+    }
+
+    int ret = loop(pipes1, pipes2, pid1, pid2);
+
+    if (ret == -1){
+        handle_error(pid1, pid2, pipes1[0], pipes1[1], pipes2[0], pipes2[1], baseimg, shared_mem);
+        return (-1);
+    } else if (ret == -2) {
+        handle_error(pid1, pid2, pipes1[0], pipes1[1], pipes2[0], pipes2[1], baseimg, shared_mem);
+        return (-2);
+    }
+
+    close(pipes1[0]);
+    close(pipes1[1]);
+    close(pipes2[0]);
+    close(pipes2[1]);
+
+    waitpid(pid1, NULL, 0);
+    waitpid(pid2, NULL, 0);    
+
+    if (shared_mem->dist == 65)
+        printf("No similar image found (no comparison could be performed successfully).\n");
     else
-    {
-        char *input;
-        bool wrote = false;
+        printf("Most similar image found: '%s' with a distance of %d.\n", shared_mem->path, shared_mem->dist);
 
-        input = get_next_line(STDIN_FILENO);
-        
-        while(input)
-        {
-            if (sigusr1)
-            {
-                write(pipe_fils1[1], &input, sizeof(input));
-                sigusr1 = false;
-                wrote = true;
-            }
-            else if (sigusr2)
-            {
-                write(pipe_fils2[1], &input, sizeof(input));
-                sigusr2 = false;
-                wrote = true;
-            }
-            if (wrote)
-            {
-                free(input);
-                input = get_next_line(STDIN_FILENO);
-                wrote = false;
-            }
-        }
-    }
 
-    if (pid1 == -1 || pid2 == -1)
-    {
-        close(pipe_fils1[0]);
-        close(pipe_fils1[1]);
-        close(pipe_fils2[0]);
-        close(pipe_fils2[1]);
-        handle_error(NULL, baseimg, NULL);
-    }
-    else
-    {
-        char *input;
-        input = get_next_line(STDIN_FILENO);
-        while(input)
-        {
-            
-        }//finish later
-    }
+    free(baseimg);
+    munmap(shared_mem, sizeof(t_img_dist));
+    sem_destroy(&sem_memoire_partagee);
 
+    return 0;
 }
-
-
-
-
-
-
-//         int counter =0;
-
-//         while (true){    //à voir 256
-//             char *input;
-//             if (sigint == true)
-//             {
-//                 kill(pid1, SIGUSR1); // le code pour envoyer un signal au process enfant doit etre ici
-//             }
-//             input = get_next_line(STDIN_FILENO);
-//             if (input == NULL){
-//                 perror(strerror(errno));
-//                 exit(1);
-//             }
-//             if(counter%2==0){
-//                 write(pipe_fils1[1], &input, sizeof(input));
-//             }
-//             else{
-//                 write(pipe_fils2[1], &input, sizeof(input));
-//             }
-//             free(input);
-//             counter++;
-//         }//end while
-        
-//         int status1;
-//         int status2;
-
-//         int ret_val;
-//         char ret_path;
-
-//         wait(&status1);
-//         wait(&status2);
-//         if (WIFEXITED(status1) && WIFEXITED(status2)){
-//             if (WEXITSTATUS(status1)==0 && WEXITSTATUS(status2)==0){
-//                 printf("wait ok");
-//                 sem_wait(&sem_memoire_partagee);  //lire var en mémoire partagée
-//                 ret_val = shared_memory->dist;    
-//                 ret_path = shared_memory->path;
-//                 sem_post(&sem_memoire_partagee);
-//             }
-//         }
-//         else if (WIFSIGNALED(status1) || WIFSIGNALED(status2))
-//         {
-//             printf("No similar image found (no comparison could be performed successfully).");
-//         }
-//         else
-//         {
-//             perror(strerror(errno));
-//         }//end wait
-        
-
-
-//         if (ret_val < 65){
-//             printf("Most similar image found: %s with a distance of %d.", ret_path, ret_val);
-//         }
-//         else{
-//             printf("No similar image found (no comparison could be performed successfully).");
-//         }
-        
-//     }//end pid==0 (père)
-
-//     else{                  //erreur creation fils 1
-//         perror("fork 1");
-//         exit(1);
-//     }
-//     return 0;
-// }//end main
-
-
-
-
-// /*QUESTIONS POUR ALESSANDRO :
-// - les sémaphores pour les fils : le fils ne commence pas à exécuter le code tant que le pipe n'est pas plein
-// - comment récupérer la distance ligne 53
-// - comment récupérer le path vers l'image qui a la distance la plus courte
-// - signal(sigint, handler2) chez les fils pour qu'ils l'ignorent?
-// */

@@ -6,6 +6,8 @@
         "stdbool.h": "c",
         "wait.h": "c",
         "signal.h": "c",
-        "strings.h": "c"
+        "strings.h": "c",
+        "stat.h": "c",
+        "mman.h": "c"
     }
 }

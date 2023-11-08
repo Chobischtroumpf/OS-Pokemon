@@ -1,30 +1,145 @@
-srcs//img-search-4-5.c: In function ‘create_shared_memory’:
-srcs//img-search-4-5.c:23:41: error: ‘MAP_ANONYMOUS’ undeclared (first use in this function)
-   23 |     const int visibility = MAP_SHARED | MAP_ANONYMOUS;
-      |                                         ^~~~~~~~~~~~~
-srcs//img-search-4-5.c:23:41: note: each undeclared identifier is reported only once for each function it appears in
-srcs//img-search-4-5.c: In function ‘main’:
-srcs//img-search-4-5.c:158:17: warning: implicit declaration of function ‘kill’ [-Wimplicit-function-declaration]
-  158 |                 kill(pid1, SIGUSR1); // le code pour envoyer un signal au process enfant doit etre ici
-      |                 ^~~~
-srcs//img-search-4-5.c:188:26: warning: assignment to ‘char’ from ‘char *’ makes integer from pointer without a cast [-Wint-conversion]
-  188 |                 ret_path = shared_memory->path;
-      |                          ^
-srcs//img-search-4-5.c:198:20: warning: passing argument 1 of ‘perror’ makes pointer from integer without a cast [-Wint-conversion]
-  198 |             perror(errno);
-      |                    ^~~~~
-      |                    |
-      |                    int
-In file included from srcs//utils.h:4,
-                 from srcs//img-search-4-5.c:9:
-/usr/include/stdio.h:804:33: note: expected ‘const char *’ but argument is of type ‘int’
-  804 | extern void perror (const char *__s);
-      |                     ~~~~~~~~~~~~^~~
-srcs//img-search-4-5.c:204:48: warning: format ‘%s’ expects argument of type ‘char *’, but argument 2 has type ‘int’ [-Wformat=]
-  204 |             printf("Most similar image found: %s with a distance of %d.", ret_path, ret_val);
-      |                                               ~^                          ~~~~~~~~
-      |                                                |                          |
-      |                                                char *                     int
-      |                                               %d
-make[1]: *** [<builtin>: srcs//img-search-4-5.o] Error 1
-make: *** [Makefile:14: default] Error 2
+
+ === Tests de l'option -i avec un chemin à ajouter au début === 
+
+Test #1  -- echo -e '1.bmp\n2.bmp\n3.bmp\n4.bmp\n' | ./launcher -i img/4.bmp img ... [0;31mÉchec[0m
+Résultat obtenu :
+	[0;33mNo similar image found (no comparison could be performed successfully).[0m
+Résultat attendu :
+	[0;33mMost similar image found: 'img/4.bmp' with a distance of 0.[0m
+Test #2  -- echo -e '1.bmp\n2.bmp\n3.bmp\n4.bmp' | ./launcher -i img/4.bmp img/ ... [0;31mÉchec[0m
+Résultat obtenu (2 sont autorisés ici) :
+	[0;33mNo similar image found (no comparison could be performed successfully).[0m
+Résultat attendu :
+	[0;33mMost similar image found: 'img//4.bmp' with a distance of 0.[0m
+ou
+	[0;33mMost similar image found: 'img/4.bmp' with a distance of 0.[0m
+
+ === Tests avec un mauvais chemin/aucune image. ===
+
+Test #3  -- echo -n -e '' | ./launcher -i img/4.bmp ... [0;32mSuccès[0m
+Test #4  -- echo -n -e '' | ./launcher -i test/ ... [0;31mÉchec[0m
+Résultat obtenu :
+	[0;33mincorrect amount of arguments or file does not exist[0m
+Résultat attendu :
+	[0;33mNo similar image found (no comparison could be performed successfully).[0m
+
+ === Tests de l'option -i ===
+
+Test #5  --  ./test/range-name-except 1 2 10 | ./launcher -i 1.bmp img ... [0;31mÉchec[0m
+Résultat obtenu :
+	[0;33mNo similar image found (no comparison could be performed successfully).[0m
+Résultat attendu :
+	[0;33mMost similar image found: 'img/2.bmp' with a distance of 26.[0m
+Test #6  --  ./test/range-name-except 1 1 10 | ./launcher -i 2.bmp img ... [0;31mÉchec[0m
+Résultat obtenu :
+	[0;33mNo similar image found (no comparison could be performed successfully).[0m
+Résultat attendu :
+	[0;33mMost similar image found: 'img/2.bmp' with a distance of 0.[0m
+Test #7  --  ./test/range-name-except 9 1 50 | ./launcher -i 9.bmp img ... [0;31mÉchec[0m
+Résultat obtenu :
+	[0;33mMost similar image found: 'img/6.bmp' with a distance of 22.[0m
+Résultat attendu :
+	[0;33mMost similar image found: 'img/36.bmp' with a distance of 20.[0m
+Test #8  --  ./test/range-name-except 9 10 60 | ./launcher -i 9.bmp img ... [0;32mSuccès[0m
+Test #9  --  ./test/range-name-except 0 10 60 | ./launcher -i 20.bmp img ... [0;31mÉchec[0m
+Résultat obtenu :
+	[0;33mNo similar image found (no comparison could be performed successfully).[0m
+Résultat attendu :
+	[0;33mMost similar image found: 'img/20.bmp' with a distance of 0.[0m
+Test #10  --  ./test/range-name-except 0 10 60 | ./launcher -i 58.bmp img ... [0;31mÉchec[0m
+Résultat obtenu :
+	[0;33mMost similar image found: 'img/12.bmp' with a distance of 21.[0m
+Résultat attendu :
+	[0;33mMost similar image found: 'img/58.bmp' with a distance of 0.[0m
+Test #11  --  ./test/range-name-except 59 30 100 | ./launcher -i 59.bmp img ... [0;31mÉchec[0m
+Résultat obtenu :
+	[0;33mMost similar image found: 'img/54.bmp' with a distance of 27.[0m
+Résultat attendu :
+	[0;33mMost similar image found: 'img/51.bmp' with a distance of 17.[0m
+Test #12  --  ./test/range-name-except 99 30 101 | ./launcher -i 99.bmp img ... [0;31mÉchec[0m
+Résultat obtenu :
+	[0;33mMost similar image found: 'img/45.bmp' with a distance of 25.[0m
+Résultat attendu :
+	[0;33mMost similar image found: 'img/76.bmp' with a distance of 20.[0m
+Test #13  --  ./test/range-name-except 0 30 101 | ./launcher -i 99.bmp img ... [0;31mÉchec[0m
+Résultat obtenu :
+	[0;33mMost similar image found: 'img/51.bmp' with a distance of 26.[0m
+Résultat attendu :
+	[0;33mMost similar image found: 'img/99.bmp' with a distance of 0.[0m
+
+ === Tests de l'option -a avec de nouvelles images ===
+
+Test #14  --  ./launcher -a test/img/1-1.bmp img ... [0;31mÉchec[0m
+Résultat obtenu :
+	[0;33mMost similar image found: 'img/19.bmp' with a distance of 24.[0m
+Résultat attendu :
+	[0;33mMost similar image found: 'img/81.bmp' with a distance of 16.[0m
+Test #15  --  ./launcher -a test/img/1-2.bmp img ... [0;31mÉchec[0m
+Résultat obtenu :
+	[0;33mMost similar image found: 'img/19.bmp' with a distance of 16.[0m
+Résultat attendu :
+	[0;33mMost similar image found: 'img/1.bmp' with a distance of 5.[0m
+Test #16  --  ./launcher -a test/img/3-1.bmp img ... [0;31mÉchec[0m
+Résultat obtenu :
+	[0;33mMost similar image found: 'img/91.bmp' with a distance of 24.[0m
+Résultat attendu :
+	[0;33mMost similar image found: 'img/3.bmp' with a distance of 4.[0m
+Test #17  --  ./launcher -a test/img/3-2.bmp img ... [0;31mÉchec[0m
+Résultat obtenu :
+	[0;33mMost similar image found: 'img/55.bmp' with a distance of 32.[0m
+Résultat attendu :
+	[0;33mMost similar image found: 'img/1.bmp' with a distance of 26.[0m
+Test #18  --  ./launcher -a test/img/6-1.bmp img ... [0;31mÉchec[0m
+Résultat obtenu :
+	[0;33mMost similar image found: 'img/86.bmp' with a distance of 22.[0m
+Résultat attendu :
+	[0;33mMost similar image found: 'img/6.bmp' with a distance of 0.[0m
+Test #19  --  ./launcher -a test/img/6-2.bmp img ... [0;31mÉchec[0m
+Résultat obtenu :
+	[0;33mMost similar image found: 'img/40.bmp' with a distance of 22.[0m
+Résultat attendu :
+	[0;33mMost similar image found: 'img/6.bmp' with a distance of 7.[0m
+Test #20  --  ./launcher -a test/img/6-3.bmp img ... [0;31mÉchec[0m
+Résultat obtenu :
+	[0;33mMost similar image found: 'img/85.bmp' with a distance of 21.[0m
+Résultat attendu :
+	[0;33mMost similar image found: 'img/6.bmp' with a distance of 8.[0m
+Test #21  --  ./launcher -a test/img/9-1.bmp img ... [0;31mÉchec[0m
+Résultat obtenu :
+	[0;33mMost similar image found: 'img/65.bmp' with a distance of 20.[0m
+Résultat attendu :
+	[0;33mMost similar image found: 'img/9.bmp' with a distance of 7.[0m
+Test #22  --  ./launcher -a test/img/9-2.bmp img ... [0;31mÉchec[0m
+Résultat obtenu :
+	[0;33mMost similar image found: 'img/28.bmp' with a distance of 21.[0m
+Résultat attendu :
+	[0;33mMost similar image found: 'img/9.bmp' with a distance of 6.[0m
+Test #23  --  ./launcher -a test/img/22-1.bmp img ... [0;31mÉchec[0m
+Résultat obtenu :
+	[0;33mMost similar image found: 'img/9.bmp' with a distance of 21.[0m
+Résultat attendu :
+	[0;33mMost similar image found: 'img/22.bmp' with a distance of 0.[0m
+Test #24  --  ./launcher -a test/img/22-2.bmp img ... [0;31mÉchec[0m
+Résultat obtenu :
+	[0;33mMost similar image found: 'img/91.bmp' with a distance of 18.[0m
+Résultat attendu :
+	[0;33mMost similar image found: 'img/22.bmp' with a distance of 8.[0m
+Test #25  --  ./launcher -a test/img/22-3.bmp img ... [0;31mÉchec[0m
+Résultat obtenu :
+	[0;33mMost similar image found: 'img/47.bmp' with a distance of 26.[0m
+Résultat attendu :
+	[0;33mMost similar image found: 'img/22.bmp' with a distance of 12.[0m
+Test #26  --  ./launcher -a test/img/86-1.bmp img ... [0;31mÉchec[0m
+Résultat obtenu :
+	[0;33mMost similar image found: 'img/82.bmp' with a distance of 26.[0m
+Résultat attendu :
+	[0;33mMost similar image found: 'img/86.bmp' with a distance of 6.[0m
+Test #27  --  ./launcher -a test/img/86-2.bmp img ... [0;32mSuccès[0m
+Test #28  --  ./launcher -a test/img/86-3.bmp img ... [0;31mÉchec[0m
+Résultat obtenu :
+	[0;33mMost similar image found: 'img/68.bmp' with a distance of 18.[0m
+Résultat attendu :
+	[0;33mMost similar image found: 'img/86.bmp' with a distance of 2.[0m
+Test #29  --  ./launcher -a test/img/86-4.bmp img ... [0;32mSuccès[0m
+
+Résultat final : 4/29

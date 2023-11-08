@@ -4,18 +4,31 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+		
 		{
 			"name": "debug projet OS",
 			"type": "cppdbg",
 			"request": "launch",
-			"preLaunchTask": "make",
 			"program": "${workspaceFolder}/img-search",
 			"args": ["${workspaceFolder}/img/1.bmp"],
 			"stopAtEntry": false,
 			"cwd": "${workspaceFolder}",
 			"environment": [],
 			"externalConsole": false,
-			"MIMode": "lldb"
+			"MIMode": "gdb",
+			"setupCommands": [
+				{
+					"description": "Follow child process",
+					"text": "set detach-on-fork on",
+					"ignoreFailures": false
+				},
+				{
+					"description": "Follow child process",
+					"text": "set follow-fork-mode child",
+					"ignoreFailures": false
+				},
+				
+		]
 		}
 	]
 }

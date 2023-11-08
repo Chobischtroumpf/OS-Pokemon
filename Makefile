@@ -3,12 +3,12 @@ NAME = img-search
 SRC_PATH = srcs
 
 SRC_NAME =	img-search-4-5.c	\
-			get_next_line.c		\
 			utils.c				\
-			sig_handlers.c
+			get_next_line.c
 
 CC = gcc
-CFLAGS = -Wall -Wextra -std=gnu11 -O2 -Wpedantic
+CFLAGS = -Wall -Wextra -Wpedantic -g2
+LDFLAGS += -fsanitize=address
 SRC = $(addprefix $(SRC_PATH)/,$(SRC_NAME))
 OBJ = $(SRC:%.c=%.o)
 

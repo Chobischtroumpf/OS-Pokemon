@@ -23,22 +23,25 @@ automatic () {
 
     ./list-file $db_path | while read line;
     do 
-        echo "$line";
+        echo "$db_path$line";
     done | ./img-search $2
 }
 
 export PATH="$PATH:./img-dist"
 
-if [ "$1" == "-i" ] || [ "$1" == "--interactive" ]; then
-    if [ "$#" -lt "2" ] || [ ! -f $2 ]; then
-        echo "incorrect amount of arguments or file does not exist"
+if [ "$#" -lt "1" ] || [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
+    echo "Usage: $0 [-i|--interactive] [-a|--automatic] image [database_path]"
+    exit 1
+elif [ "$1" == "-i" ] || [ "$1" == "--interactive" ]; then
+    if [ "$#" -lt "2" ]; then
+        echo "incorrect amount of arguments"
         exit 1
     fi
     interactive $1 $2 $3
     exit
 elif [ "$1" == "-a" ] || [ "$1" == "--automatic" ]; then
     if [ $# -lt "2" ] || [ ! -f $2 ] || [ ! -d $3 ]; then
-        echo "wrong amount of arguments, or file does not exist, or directory does not exist"
+        echo "wrong amount of arguments"
     fi
     automatic $1 $2 $3
     exit
