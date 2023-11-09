@@ -49,6 +49,14 @@ void    fils(char *baseimg, int pipe[2], t_img_dist *shared_mem)
         if (flag & FLAG_TERM || flag & FLAG_PIPE || flag & FLAG_INT)
             break;
         tempval = get_next_line(pipe[0], &otherimg);
+        if (first){
+            fprintf(stderr, "data received by child1 :");
+        } else {
+            fprintf(stderr, "data received by child2 :");
+        }
+
+        fprintf(stderr, " otherimg: %s\n", otherimg);
+
         if (tempval == -2){
             sig_err_msg(ERR_GNL);
             ret = -2;

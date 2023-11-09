@@ -11,24 +11,27 @@
 sem_t sem_memoire_partagee;
 int flag = 0;
 
-int         send_path(char *otherimg, int pipe[2])
+int send_path(char *otherimg, int pipe[2])
 {
-    if (write(pipe[1], otherimg, strlen(otherimg)) == -1)
-    {
+    char *data;
+    int len = strlen(otherimg)+2;
+    data = (char*)malloc(sizeof(char) * len);
+    if (!data)
+        return (-1);
+    memmove(data, otherimg, len-2);
+    data[len-1] = '\0';
+    data[len-2] = '\n';
+    if (write(pipe[1], data, len) == -1){
         perror(ERR_WRITE);
-        if (errno == EINTR)
-            return (-2);
-        else
-            return (-1);
+        free(data);
+        if (errno==EINTR && flag)
+            return -2;
+        return -1;
     }
-    if (write(pipe[1], "\n", 1) == -1)
-    {
-        perror(ERR_WRITE);
-        if (errno == EINTR)
-            return (-2);
-        else
-            return (-1);
-    }
+    fprintf(stderr, "data being sent to child: %s", data);
+    free(data);
+    return 0;
+
     return 0;
 }
 
@@ -38,7 +41,7 @@ int         send_path(char *otherimg, int pipe[2])
 ** Return -1 if an error occured
 ** Return -2 if a signal was received
 */
-int         loop(int pipe1[2], int pipe2[2])
+int loop(int pipe1[2], int pipe2[2])
 {
     char *otherimg = NULL;
     bool first;
@@ -57,11 +60,10 @@ int         loop(int pipe1[2], int pipe2[2])
             return (-2);
         }
         ret = get_next_line(0, &otherimg);
-        printf("otherimg: %s\n", otherimg);
-        if (ret == -2) {
-            perror(ERR_GNL);
-            free(otherimg);
-            return (-2);
+        // printf("otherimg: %s\n", otherimg);
+        if (ret == -1 && errno == EINTR)
+        {
+            
         } else if (ret == -1) {
             perror(ERR_GNL);
             free(otherimg);
@@ -71,9 +73,11 @@ int         loop(int pipe1[2], int pipe2[2])
         }
 
         if (first) {
+            fprintf(stderr, "otherimg to child1 : %s\n", otherimg);
             ret = send_path(otherimg, pipe1);
             first = false;
         } else {
+            fprintf(stderr, "otherimg to child2 : %s \n", otherimg);
             ret = send_path(otherimg, pipe2);
             first = true;
         }
@@ -86,7 +90,7 @@ int         loop(int pipe1[2], int pipe2[2])
     return 0;
 }
 
-int         main(int argc, char* argv[])
+int main(int argc, char* argv[])
 {
     t_img_dist *shared_mem;
     char *baseimg;
