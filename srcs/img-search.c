@@ -11,6 +11,34 @@
 sem_t sem_memoire_partagee;
 int flag = 0;
 
+void    handle_error(pid_t child1, pid_t child2, int read_child1, int write_child1, int read_child2, int write_child2, char *baseimg, t_img_dist *shared_mem)
+{
+    if (child1 != -1)
+        kill(child1, SIGTERM);
+    if (child2 != -1)
+        kill(child2, SIGTERM);
+    if (child1 != -1)
+        waitpid(child1, NULL, 0);
+    if (child2 != -1)
+        waitpid(child2, NULL, 0);
+
+    if (read_child1 != -1)
+        close(read_child1);
+    if (write_child1 != -1)
+        close(write_child1);
+
+    if (read_child2 != -1)
+        close(read_child2);
+    if (write_child2 != -1)
+        close(write_child2);
+    if (baseimg != NULL)
+        free(baseimg);
+    if (shared_mem != NULL)
+        munmap(shared_mem, sizeof(t_img_dist));
+
+    sem_destroy(&sem_memoire_partagee);
+    perror(strerror(errno));
+}
 
 t_img_dist  *create_shared_memory(size_t size)
 {
@@ -44,18 +72,13 @@ int         set_shared_memory(t_img_dist *shared_mem, int dist, char *path)
 
 void        sig_handler(int signum)
 {
-    if(signum == SIGTERM)
-    {
+    if(signum == SIGTERM) {
         flag |= FLAG_TERM;
         printf("SIGTERM\n");
-    }
-    else if(signum == SIGPIPE)
-    {
+    } else if(signum == SIGPIPE) {
         flag |= FLAG_PIPE;
         printf("SIGPIPE\n");
-    }
-    else if(signum == SIGINT)
-    {
+    } else if(signum == SIGINT) {
         flag |= FLAG_INT;
         printf("SIGINT\n");
     }
@@ -185,20 +208,32 @@ int         send_path(char *otherimg, int pipe[2])
     return 0;
 }
 
+/*
+** Program's main loop
+** Read the path of an image from stdin and send it to the child process's pipe
+** Return -1 if an error occured
+** Return -2 if a signal was received
+*/
 int         loop(int pipe1[2], int pipe2[2], pid_t pid1, pid_t pid2)
 {
     char *otherimg;
-    bool first = true;
-    bool cont = true;
+    bool first;
+    bool cont;
     int ret;
+
+    signal(SIGTERM, sig_handler);
+    signal(SIGPIPE, sig_handler);
+    signal(SIGINT, sig_handler);
+
+    first = true;
+    cont = true;
 
     while(cont)
     {
         if (flag & FLAG_INT)
         {
-            kill(pid1, SIGTERM);
-            kill(pid2, SIGTERM);
-            return (-1);
+            printf("SIGINT received, exiting...\n");
+            return (-2);
         }
         ret = get_next_line(0, &otherimg);
         if (ret == -2) {
@@ -229,20 +264,56 @@ int         loop(int pipe1[2], int pipe2[2], pid_t pid1, pid_t pid2)
     return 0;
 }
 
+/*
+** Create a pipe and store the read and write ends in newpipe
+** Return -1 if an error occured
+** Return 0 if the pipe was created successfully
+*/
+int         create_pipe(int *newpipe)
+{
+    if (pipe(newpipe) == -1){
+        return (-1);
+    }
+    return 0;
+}
+
+
+/*
+** Create a child process and close the unused pipe ends
+** Return the pid of the child process
+** Return -1 if an error occured
+** Does not return in the child process
+*/
+pid_t         create_child(int *pipe1, int *pipe2, char *baseimg, t_img_dist *shared_mem)
+{
+    pid_t pid;
+    
+    pid = fork();
+    if (pid == 0) {
+        close(pipe2[0]);
+        close(pipe2[1]);
+        fils(baseimg, pipe1, shared_mem);
+    } else if (pid == -1) {
+        return ((pid_t)-1);
+    }
+    return pid;
+}
+
 int         main(int argc, char* argv[])
 {
-    char *baseimg;
     t_img_dist *shared_mem;
+    char *baseimg;
+    pid_t pid1;
+    pid_t pid2;
+    int pipe1[2];
+    int pipe2[2];
+    int loop_ret;
 
-    signal(SIGTERM, sig_handler);
-    signal(SIGPIPE, sig_handler);
-    signal(SIGINT, sig_handler);
-
-    if (argc != 2)
-    {
+    if (argc != 2) {
         printf("Usage: %s <path to file>\n", argv[0]);
         return 1;
     }
+
     baseimg = ft_strdup(argv[1]);
     if (baseimg == NULL)
         return (-1);
@@ -255,7 +326,6 @@ int         main(int argc, char* argv[])
     }
 
     shared_mem = create_shared_memory(sizeof(t_img_dist));
-
     if (shared_mem == NULL)
     {
         free(baseimg);
@@ -264,60 +334,44 @@ int         main(int argc, char* argv[])
         return (-1);
     }
 
-    int pipes1[2];
-    int pipes2[2];
-
-    if (pipe(pipes1) == -1){
-        perror(ERR_PIPE);
-        handle_error(-1, -1, -1, -1, -1, -1, baseimg, shared_mem);
-        return (-1);
-    }
-    if (pipe(pipes2) == -1){
-        perror(ERR_PIPE);
-        handle_error(-1, -1, pipes1[0], pipes1[1], -1, -1, baseimg, shared_mem);
-        return (-1);
-    }
-    pid_t pid1 = fork();
-
-    if (pid1 == 0)
+    if (create_pipe(&pipe1) || create_pipe(&pipe2))
     {
-        close(pipes2[0]);
-        close(pipes2[1]);
-        fils(baseimg, pipes1, shared_mem);
+        perror(ERR_PIPE);
+        handle_error(-1, -1, pipe1[0], pipe1[1], -1, -1, baseimg, shared_mem);
+        return (-1);
     }
-    else if (pid1 == -1)
+
+    pid1 = create_child(pipe1, pipe2, baseimg, shared_mem);
+    if (pid1 == -1)
     {
         perror(ERR_FORK);
-        handle_error(-1, -1, pipes1[0], pipes1[1], pipes2[0], pipes2[1], baseimg, shared_mem);
+        handle_error(-1, -1, pipe1[0], pipe1[1], pipe2[0], pipe2[1], baseimg, shared_mem);
         return (-1);
     }
 
-    pid_t pid2 = fork();
-
-    if (pid2 == 0) {
-        close(pipes1[0]);
-        close(pipes1[1]);
-        fils(baseimg, pipes2, shared_mem);
-    } else if (pid2 == -1) {
+    pid2 = create_child(pipe1, pipe2, baseimg, shared_mem);
+    if (pid2 == -1) {
         perror(ERR_FORK);
-        handle_error(pid1, -1, pipes1[0], pipes1[1], pipes2[0], pipes2[1], baseimg, shared_mem);
+        handle_error(pid1, -1, pipe1[0], pipe1[1], pipe2[0], pipe2[1], baseimg, shared_mem);
         return (-1);
     }
 
-    int ret = loop(pipes1, pipes2, pid1, pid2);
+    loop_ret = loop(pipe1, pipe2, pid1, pid2);
 
-    if (ret == -1){
-        handle_error(pid1, pid2, pipes1[0], pipes1[1], pipes2[0], pipes2[1], baseimg, shared_mem);
+    if (loop_ret == -1){
+        printf("Error while reading from stdin.\n");
+        handle_error(pid1, pid2, pipe1[0], pipe1[1], pipe2[0], pipe2[1], baseimg, shared_mem);
         return (-1);
-    } else if (ret == -2) {
-        handle_error(pid1, pid2, pipes1[0], pipes1[1], pipes2[0], pipes2[1], baseimg, shared_mem);
+    } else if (loop_ret == -2) {
+        printf("Signal received while reading from stdin.\n");
+        handle_error(pid1, pid2, pipe1[0], pipe1[1], pipe2[0], pipe2[1], baseimg, shared_mem);
         return (-2);
     }
 
-    close(pipes1[0]);
-    close(pipes1[1]);
-    close(pipes2[0]);
-    close(pipes2[1]);
+    close(pipe1[0]);
+    close(pipe1[1]);
+    close(pipe2[0]);
+    close(pipe2[1]);
 
     waitpid(pid1, NULL, 0);
     waitpid(pid2, NULL, 0);    
