@@ -10,7 +10,7 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "utils.h"
+#include "img_search.h"
 
 int	ft_strchr_pos(const char *s, int c)
 {
@@ -66,12 +66,10 @@ int get_next_line(int fd, char **line)
     while (strchr(buf[fd], '\n') == NULL && ret)
     {
         ret = read(fd, buf[fd], BUFFER_SIZE);
-        if (ret == -1 && errno != EINTR)
-            return (-1);
-        else if (ret == -1 && errno == EINTR)
-        {
-            if (flag & FLAG_PIPE || flag & FLAG_TERM || flag & FLAG_INT)
-                return (-2);
+        if (ret == -1 && errno == EINTR) {
+            return -2;
+        } else if (ret == -1) {
+            return -1;
         }
         buf[fd][ret] = '\0';
         if (!(*line = ft_strjoin_to_eol(*line, buf[fd])))

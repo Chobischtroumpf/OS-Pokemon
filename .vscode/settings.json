@@ -1,6 +1,6 @@
 {
     "files.associations": {
-        "utils.h": "c",
+        "img_search.h": "c",
         "types.h": "c",
         "string.h": "c",
         "stdbool.h": "c",
@@ -8,6 +8,7 @@
         "signal.h": "c",
         "strings.h": "c",
         "stat.h": "c",
-        "mman.h": "c"
+        "mman.h": "c",
+        "stdlib.h": "c"
     }
 }

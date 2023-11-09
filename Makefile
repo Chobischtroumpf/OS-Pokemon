@@ -1,38 +1,58 @@
+
+# exec name
 NAME = img-search
 
-SRC_PATH = srcs
-
-SRC_NAME =	img-search.c	\
-			utils.c				\
-			get_next_line.c
-
+# compiler
 CC = gcc
 CFLAGS = -Wall -Wextra -Wpedantic -g2
-LDFLAGS += -fsanitize=address
-SRC = $(addprefix $(SRC_PATH)/,$(SRC_NAME))
-OBJ = $(SRC:%.c=%.o)
 
-default:
-	@make -s all
+#folder names
+SRCDIR = srcs/
+INCDIR = includes/
+OBJDIR = bin/
+
+CFLAGS += -I $(INCDIR)
+
+SRCS =\
+	./srcs/child.c			\
+	./srcs/get_next_line.c	\
+	./srcs/handle_error.c	\
+	./srcs/img-search.c		\
+	./srcs/shared_mem.c		\
+	./srcs/signals.c	
+
+HEADERS =\
+	./includes/img-search.h	\
+
+LDFLAGS = -fsanitize=address
+
+SRC 	:= $(notdir $(SRCS))
+OBJ		:= $(SRC:%.c=%.o)
+OBJS	:= $(addprefix $(OBJDIR), $(OBJ))
+
+VPATH := $(SRCDIR) $(OBJDIR) $(shell find $(SRCDIR) -type d)
+
+# RULES
 
 all: $(NAME)
 
-$(NAME): $(OBJ)
-	@echo "img-search compiling"
-	@$(CC) $(LDFLAGS) $(LDLIBS) $^ -o $@
-	@$(call update)
+$(OBJDIR)%.o : %.c
+	@mkdir -p $(OBJDIR)
+	@$(CC) $(CFLAGS) -c $< -o $@
 
-.SILENT:clean
+$(NAME): $(SRCS) $(OBJS)
+	@echo "img-search compiling"
+	@$(CC) $(CFLAGS) $(OBJS) $(LDFLAGS) -o $(NAME)
 
 clean:
 	@echo "cleaning up img-search object files"
-	@rm -rf $(OBJ)
+	@cd 
+	@rm -rf $(OBJDIR)
 
-fclean:
-	@echo "cleaning up img-search object files and executable"
-	@rm -rf $(OBJ)
+fclean: clean
+	@echo "cleaning up img-search executable"
 	@rm -f $(NAME)
 
-re: 
-	@make -s fclean 
-	@make -s all
+re: fclean all
+
+.PHONY: all clean fclean re
