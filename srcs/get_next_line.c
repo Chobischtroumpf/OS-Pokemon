@@ -66,7 +66,7 @@ int			get_next_line(int fd, char **line)
 	while (ft_strchr_pos(buf[fd], '\n') == -1 && ret)
 	{
 		ret = read(fd, buf[fd], BUFFER_SIZE);
-		if (ret == -1)
+		if (ret == -1 && errno == EINTR)
 			return (-1);
 		buf[fd][ret] = '\0';
 		if (!(*line = ft_strjoin_to_eol(*line, buf[fd])))

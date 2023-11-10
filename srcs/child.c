@@ -34,7 +34,7 @@ int     exec_img_dist(char *baseimg, char *otherimg)
     return ret;
 }
 
-void    fils(char *baseimg, int pipe[2], t_img_dist *shared_mem)
+void    fils(char *baseimg, int pipe, t_img_dist *shared_mem)
 {
     char *otherimg;
     int tempval;
@@ -43,19 +43,18 @@ void    fils(char *baseimg, int pipe[2], t_img_dist *shared_mem)
 
     set_sighandler(true);
 
-    close(pipe[1]);
     while(cont)
     {
         if (flag & FLAG_TERM || flag & FLAG_PIPE || flag & FLAG_INT)
             break;
-        tempval = get_next_line(pipe[0], &otherimg);
+        tempval = get_next_line(pipe, &otherimg);
         if (first){
-            fprintf(stderr, "data received by child1 :");
+            // fprintf(stderr, "data received by child1 :");
         } else {
-            fprintf(stderr, "data received by child2 :");
+            // fprintf(stderr, "data received by child2 :");
         }
 
-        fprintf(stderr, " otherimg: %s\n", otherimg);
+        // fprintf(stderr, " otherimg: %s\n", otherimg);
 
         if (tempval == -2){
             sig_err_msg(ERR_GNL);
@@ -82,6 +81,7 @@ void    fils(char *baseimg, int pipe[2], t_img_dist *shared_mem)
             ret = -1;
             break;
         }
+        kill(getppid(), SIGUSR1);
 
         if (set_shared_memory(shared_mem, tempval, otherimg) == -1) {
             sig_err_msg(ERR_SSM);
@@ -93,6 +93,7 @@ void    fils(char *baseimg, int pipe[2], t_img_dist *shared_mem)
     }
     free(otherimg);
     free(baseimg);
+    close(pipe);
     exit(ret);
 }
 
@@ -111,7 +112,8 @@ pid_t   create_child(int *pipe1, int *pipe2, char *baseimg, t_img_dist *shared_m
     if (pid == 0) {
         close(pipe2[0]);
         close(pipe2[1]);
-        fils(baseimg, pipe1, shared_mem);
+        close(pipe1[1]);
+        fils(baseimg, pipe1[0], shared_mem);
     } else if (pid == -1) {
         return ((pid_t)-1);
     }

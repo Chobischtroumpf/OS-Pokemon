@@ -9,6 +9,7 @@
         "strings.h": "c",
         "stat.h": "c",
         "mman.h": "c",
-        "stdlib.h": "c"
+        "stdlib.h": "c",
+        "istream": "c"
     }
 }

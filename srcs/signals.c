@@ -3,13 +3,16 @@
 void        sig_handler(int signum){
     if(signum == SIGTERM) {
         flag |= FLAG_TERM;
-        printf("SIGTERM\n");
+        // printf("SIGTERM\n");
     } else if(signum == SIGPIPE) {
         flag |= FLAG_PIPE;
-        printf("SIGPIPE\n");
+        // printf("SIGPIPE\n");
     } else if(signum == SIGINT) {
         flag |= FLAG_INT;
-        printf("SIGINT\n");
+        // printf("SIGINT\n");
+    } else if (signum == SIGUSR1 || signum == SIGUSR2){
+        to_handle -=1;
+        // printf("SIGUSR\n");
     }
 }
 
@@ -17,9 +20,12 @@ void        set_sighandler(bool child)
 {
     sigaction(SIGTERM, &(struct sigaction){.sa_handler = sig_handler, .sa_flags = 0}, NULL);
     sigaction(SIGPIPE, &(struct sigaction){.sa_handler = sig_handler, .sa_flags = 0}, NULL);
-    if (!child)
+    if (!child) {
         sigaction(SIGINT, &(struct sigaction){.sa_handler = sig_handler, .sa_flags = 0}, NULL);
-    else 
+        sigaction(SIGUSR1, &(struct sigaction){.sa_handler = sig_handler, .sa_flags = 0}, NULL);
+        sigaction(SIGUSR2, &(struct sigaction){.sa_handler = sig_handler, .sa_flags = 0}, NULL);
+        
+    } else 
         sigaction(SIGINT, &(struct sigaction){.sa_handler = SIG_IGN, .sa_flags = 0}, NULL);
 }
 

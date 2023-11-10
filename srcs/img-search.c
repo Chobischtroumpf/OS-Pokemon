@@ -7,31 +7,27 @@
     */
 
 #include "img_search.h"
+#include <time.h>
 
 sem_t sem_memoire_partagee;
-int flag = 0;
+short flag = 0;
+int to_handle = 0;
 
 int send_path(char *otherimg, int pipe[2])
 {
-    char *data;
-    int len = strlen(otherimg)+2;
-    data = (char*)malloc(sizeof(char) * len);
-    if (!data)
-        return (-1);
-    memmove(data, otherimg, len-2);
-    data[len-1] = '\0';
-    data[len-2] = '\n';
-    if (write(pipe[1], data, len) == -1){
+    if (write(pipe[1], otherimg, strlen(otherimg)) == -1){
         perror(ERR_WRITE);
-        free(data);
         if (errno==EINTR && flag)
             return -2;
         return -1;
     }
-    fprintf(stderr, "data being sent to child: %s", data);
-    free(data);
-    return 0;
-
+    if (write(pipe[1], "\n", 1) == -1){
+        perror(ERR_WRITE);
+        if (errno==EINTR && flag)
+            return -2;
+        return -1;
+    }
+    // fprintf(stderr, "data being sent to child: %s", otherimg);
     return 0;
 }
 
@@ -44,13 +40,13 @@ int send_path(char *otherimg, int pipe[2])
 int loop(int pipe1[2], int pipe2[2])
 {
     char *otherimg = NULL;
-    bool first;
+    // bool first;
     bool cont;
     int ret; 
 
     set_sighandler(false);
 
-    first = true;
+    // first = true;
     cont = true;
 
     while(cont)
@@ -61,9 +57,8 @@ int loop(int pipe1[2], int pipe2[2])
         }
         ret = get_next_line(0, &otherimg);
         // printf("otherimg: %s\n", otherimg);
-        if (ret == -1 && errno == EINTR)
-        {
-            
+        if (ret == -1 && errno == EINTR) {
+            perror(ERR_GNL);
         } else if (ret == -1) {
             perror(ERR_GNL);
             free(otherimg);
@@ -71,13 +66,13 @@ int loop(int pipe1[2], int pipe2[2])
         } else if (ret == 0) {
             cont = false;
         }
-
+        to_handle++;
         if (first) {
-            fprintf(stderr, "otherimg to child1 : %s\n", otherimg);
+            // fprintf(stderr, "otherimg to child1 : %s\n", otherimg);
             ret = send_path(otherimg, pipe1);
             first = false;
         } else {
-            fprintf(stderr, "otherimg to child2 : %s \n", otherimg);
+            // fprintf(stderr, "otherimg to child2 : %s \n", otherimg);
             ret = send_path(otherimg, pipe2);
             first = true;
         }
@@ -142,12 +137,15 @@ int main(int argc, char* argv[])
         return (-1);
     }
     first=false;
-    pid2 = create_child(pipe1, pipe2, baseimg, shared_mem);
+    pid2 = create_child(pipe2, pipe1, baseimg, shared_mem);
     if (pid2 == -1) {
         perror(ERR_FORK);
         handle_error(pid1, -1, pipe1[0], pipe1[1], pipe2[0], pipe2[1], baseimg, shared_mem);
         return (-1);
     }
+
+    close(pipe1[0]);
+    close(pipe2[0]);
 
     loop_ret = loop(pipe1, pipe2);
 
@@ -161,19 +159,28 @@ int main(int argc, char* argv[])
         return (-2);
     }
 
-    close(pipe1[0]);
+    time_t t = time(NULL);
+    fprintf(stderr, "before waitpid's %ld \n", t);
+    
+    while(to_handle > 0) {
+        pause();
+        if (flag & FLAG_INT || flag & FLAG_TERM || flag & FLAG_PIPE) {
+            fprintf(stderr, "Signal received, exiting...\n");
+            handle_error(pid1, pid2, pipe1[0], pipe1[1], pipe2[0], pipe2[1], baseimg, shared_mem);
+            return (-2);
+        }
+        // printf("to_handle: %d\n", to_handle);
+    }
+
     close(pipe1[1]);
-    close(pipe2[0]);
     close(pipe2[1]);
 
-    if (waitpid(pid1, NULL, 0) == -1){
-        handle_error(pid1, pid2, -1, -1, -1, -1, baseimg, shared_mem);
-        return -1;
-    }
-    if (waitpid(pid2, NULL, 0) == -1) {
-        handle_error(-1, pid2, -1, -1, -1, -1, baseimg, shared_mem);
-        return -1;
-    }
+    int status;
+    waitpid(pid1, &status, 0);
+    waitpid(pid2, &status, 0);
+    
+    t = time(NULL);
+    fprintf(stderr, "after waitpid's %ld\n", t);
 
     if (shared_mem->dist == 65)
         printf("No similar image found (no comparison could be performed successfully).\n");

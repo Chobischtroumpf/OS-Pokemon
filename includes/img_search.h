@@ -20,6 +20,7 @@
 #define FLAG_TERM 0x01
 #define FLAG_PIPE 0x02
 #define FLAG_INT 0x04
+#define FLAG_USR 0x08
 
 #define ERR_PIPE "Error: got SIGPIPE "
 #define ERR_TERM "Error: got SIGTERM "
@@ -36,9 +37,10 @@ typedef struct img_dist{
     char path[1000];
 } t_img_dist;
 
-extern int flag;
+extern short flag;
 extern sem_t sem_memoire_partagee;
 extern bool first;
+extern int to_handle;
 
 /*
 ** handle_error.c
