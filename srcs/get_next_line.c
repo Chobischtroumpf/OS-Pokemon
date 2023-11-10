@@ -55,7 +55,7 @@ static char	*ft_strjoin_to_eol(char *s1, char *buf)
 
 int			get_next_line(int fd, char **line)
 {
-	static char		buf[FOPEN_MAX][BUFFER_SIZE + 1];
+	static char		buf[FD_MAX][BUFFER_SIZE + 1];
 	int				ret;
 	int				i;
 

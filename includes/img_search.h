@@ -20,7 +20,9 @@
 #define FLAG_TERM 0x01
 #define FLAG_PIPE 0x02
 #define FLAG_INT 0x04
-#define FLAG_USR 0x08
+// #define FLAG_USR 0x08
+
+# define FD_MAX 1024
 
 #define ERR_PIPE "Error: got SIGPIPE "
 #define ERR_TERM "Error: got SIGTERM "
@@ -39,7 +41,6 @@ typedef struct img_dist{
 
 extern short flag;
 extern sem_t sem_memoire_partagee;
-extern bool first;
 extern int to_handle;
 
 /*
@@ -56,7 +57,7 @@ int         get_next_line(int fd, char **line);
 /*
 ** img-dist.c
 */
-pid_t       create_child(int *pipe1, int *pipe2, char *baseimg, t_img_dist *shared_mem);
+pid_t       create_child(int *pipe1, int *pipe2, char *baseimg, t_img_dist *shared_mem, bool first);
 
 /*
 ** shared_mem.c
@@ -67,6 +68,7 @@ int         set_shared_memory(t_img_dist *shared_mem, int dist, char *path);
 /*
 ** signals.c
 */
+void        sig_handler(int signum);
 void        set_sighandler(bool child);
 void        sig_err_msg(char *msg);
 

@@ -10,10 +10,17 @@ void        sig_handler(int signum){
     } else if(signum == SIGINT) {
         flag |= FLAG_INT;
         // printf("SIGINT\n");
-    } else if (signum == SIGUSR1 || signum == SIGUSR2){
-        to_handle -=1;
-        // printf("SIGUSR\n");
     }
+}
+
+void sig_handle_usr(int signum){
+    if (signum == SIGUSR1){
+        to_handle--;
+    }
+    if (signum == SIGUSR2){
+        to_handle--;
+    }
+    
 }
 
 void        set_sighandler(bool child)
@@ -22,9 +29,8 @@ void        set_sighandler(bool child)
     sigaction(SIGPIPE, &(struct sigaction){.sa_handler = sig_handler, .sa_flags = 0}, NULL);
     if (!child) {
         sigaction(SIGINT, &(struct sigaction){.sa_handler = sig_handler, .sa_flags = 0}, NULL);
-        sigaction(SIGUSR1, &(struct sigaction){.sa_handler = sig_handler, .sa_flags = 0}, NULL);
-        sigaction(SIGUSR2, &(struct sigaction){.sa_handler = sig_handler, .sa_flags = 0}, NULL);
-        
+        sigaction(SIGUSR1, &(struct sigaction){.sa_handler = sig_handle_usr, .sa_flags = SA_RESTART | SA_NODEFER}, NULL);
+        sigaction(SIGUSR2, &(struct sigaction){.sa_handler = sig_handle_usr, .sa_flags = SA_RESTART | SA_NODEFER}, NULL);
     } else 
         sigaction(SIGINT, &(struct sigaction){.sa_handler = SIG_IGN, .sa_flags = 0}, NULL);
 }

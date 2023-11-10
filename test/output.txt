@@ -1,1 +1,122 @@
-zsh: no such file or directory: ./launcher
+before GNL
+sending to c1 : img/1.bmp
+sending to c2 : img/2.bmp
+sending to c1 : img/3.bmp
+sending to c2 : img/4.bmp
+after GNL, got : img/1.bmp
+before GNL
+after GNL, got : img/2.bmp
+sending SIGUSR1
+before GNL
+after GNL, got : img/4.bmp
+sending SIGUSR1
+before GNL
+after GNL, got : img/3.bmp
+sending SIGUSR1
+before GNL
+sending SIGUSR1
+before GNL
+before GNL
+before GNL
+sending to c1 : img//1.bmp
+sending to c2 : img//2.bmp
+sending to c1 : img//3.bmp
+sending to c2 : img//4.bmp
+after GNL, got : img//2.bmp
+after GNL, got : img//1.bmp
+sending SIGUSR1
+before GNL
+after GNL, got : img//4.bmp
+sending SIGUSR1
+before GNL
+after GNL, got : img//3.bmp
+sending SIGUSR1
+before GNL
+sending SIGUSR1
+before GNL
+before GNL
+before GNL
+before GNL
+before GNL
+before GNL
+before GNL
+sending to c1 : img/2.bmp
+sending to c2 : img/3.bmp
+sending to c1 : img/4.bmp
+sending to c2 : img/5.bmp
+sending to c1 : img/6.bmp
+sending to c2 : img/7.bmp
+sending to c1 : img/8.bmp
+sending to c2 : img/9.bmp
+sending to c1 : img/10.bmp
+after GNL, got : img/2.bmp
+after GNL, got : img/3.bmp
+sending SIGUSR1
+before GNL
+after GNL, got : img/5.bmp
+sending SIGUSR1
+before GNL
+after GNL, got : img/4.bmp
+sending SIGUSR1
+before GNL
+after GNL, got : img/7.bmp
+sending SIGUSR1
+before GNL
+after GNL, got : img/6.bmp
+sending SIGUSR1
+before GNL
+after GNL, got : img/9.bmp
+sending SIGUSR1
+before GNL
+after GNL, got : img/8.bmp
+sending SIGUSR1
+before GNL
+sending SIGUSR1
+before GNL
+after GNL, got : img/10.bmp
+sending SIGUSR1
+before GNL
+before GNL
+sending to c1 : img/2.bmp
+sending to c2 : img/3.bmp
+sending to c1 : img/4.bmp
+sending to c2 : img/5.bmp
+sending to c1 : img/6.bmp
+sending to c2 : img/7.bmp
+sending to c1 : img/8.bmp
+sending to c2 : img/9.bmp
+sending to c1 : img/10.bmp
+after GNL, got : img/2.bmp
+before GNL
+after GNL, got : img/3.bmp
+sending SIGUSR1
+sending SIGUSR1
+before GNL
+after GNL, got : img/5.bmp
+before GNL
+after GNL, got : img/4.bmp
+sending SIGUSR1
+before GNL
+after GNL, got : img/6.bmp
+sending SIGUSR1
+before GNL
+after GNL, got : img/7.bmp
+sending SIGUSR1
+before GNL
+after GNL, got : img/9.bmp
+sending SIGUSR1
+before GNL
+after GNL, got : img/8.bmp
+sending SIGUSR1
+before GNL
+sending SIGUSR1
+before GNL
+after GNL, got : img/10.bmp
+sending SIGUSR1
+before GNL
+Signal received, exiting...
+Error: GNL : Interrupted system call
+Interrupted system call: Interrupted system call
+Error: GNL : Interrupted system call
+Interrupted system call: Interrupted system call
+Interrupted system call: Interrupted system call

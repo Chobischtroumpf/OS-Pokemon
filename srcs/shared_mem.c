@@ -19,7 +19,6 @@ int         set_shared_memory(t_img_dist *shared_mem, int dist, char *path)
 {
     if (sem_wait(&sem_memoire_partagee) == -1)
         return (-1);
-    fprintf(stderr, "path : %s : dist : %d, shared_mem->dist : %d \n", path, dist, shared_mem->dist);
     if (dist < shared_mem->dist) {
         shared_mem->dist = dist;
         bzero(shared_mem->path, 1000);

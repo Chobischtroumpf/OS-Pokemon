@@ -1,6 +1,5 @@
 #include "img_search.h"
 
-bool first = true;
 
 int     exec_img_dist(char *baseimg, char *otherimg)
 {
@@ -34,7 +33,7 @@ int     exec_img_dist(char *baseimg, char *otherimg)
     return ret;
 }
 
-void    fils(char *baseimg, int pipe, t_img_dist *shared_mem)
+void    fils(char *baseimg, int pipe, t_img_dist *shared_mem, bool first)
 {
     char *otherimg;
     int tempval;
@@ -47,15 +46,8 @@ void    fils(char *baseimg, int pipe, t_img_dist *shared_mem)
     {
         if (flag & FLAG_TERM || flag & FLAG_PIPE || flag & FLAG_INT)
             break;
+
         tempval = get_next_line(pipe, &otherimg);
-        if (first){
-            // fprintf(stderr, "data received by child1 :");
-        } else {
-            // fprintf(stderr, "data received by child2 :");
-        }
-
-        // fprintf(stderr, " otherimg: %s\n", otherimg);
-
         if (tempval == -2){
             sig_err_msg(ERR_GNL);
             ret = -2;
@@ -70,6 +62,7 @@ void    fils(char *baseimg, int pipe, t_img_dist *shared_mem)
         }
 
         tempval = exec_img_dist(baseimg, otherimg);
+
         if (tempval == -2)
         {
             sig_err_msg(ERR_EID);
@@ -80,8 +73,12 @@ void    fils(char *baseimg, int pipe, t_img_dist *shared_mem)
             perror(strerror(errno));
             ret = -1;
             break;
+        } else {
+            if (first)
+                kill(getppid(), SIGUSR1);
+            else
+                kill(getppid(), SIGUSR2);
         }
-        kill(getppid(), SIGUSR1);
 
         if (set_shared_memory(shared_mem, tempval, otherimg) == -1) {
             sig_err_msg(ERR_SSM);
@@ -95,6 +92,7 @@ void    fils(char *baseimg, int pipe, t_img_dist *shared_mem)
     free(baseimg);
     close(pipe);
     exit(ret);
+    // return ;
 }
 
 
@@ -104,7 +102,7 @@ void    fils(char *baseimg, int pipe, t_img_dist *shared_mem)
 ** Return -1 if an error occured
 ** Does not return in the child process
 */
-pid_t   create_child(int *pipe1, int *pipe2, char *baseimg, t_img_dist *shared_mem)
+pid_t   create_child(int *pipe1, int *pipe2, char *baseimg, t_img_dist *shared_mem, bool first)
 {
     pid_t pid;
     
@@ -113,7 +111,7 @@ pid_t   create_child(int *pipe1, int *pipe2, char *baseimg, t_img_dist *shared_m
         close(pipe2[0]);
         close(pipe2[1]);
         close(pipe1[1]);
-        fils(baseimg, pipe1[0], shared_mem);
+        fils(baseimg, pipe1[0], shared_mem, first);
     } else if (pid == -1) {
         return ((pid_t)-1);
     }
