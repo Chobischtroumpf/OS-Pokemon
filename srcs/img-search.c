@@ -10,28 +10,26 @@
 
 sem_t sem_memoire_partagee;
 int flag = 0;
+int to_handle =0;
 
 int send_path(char *otherimg, int pipe[2])
 {
-    char *data;
-    int len = strlen(otherimg)+2;
-    data = (char*)malloc(sizeof(char) * len);
-    if (!data)
-        return (-1);
-    memmove(data, otherimg, len-2);
-    data[len-1] = '\0';
-    data[len-2] = '\n';
-    if (write(pipe[1], data, len) == -1){
+    if (write(pipe[1], otherimg, strlen(otherimg)) == -1)
+    {
         perror(ERR_WRITE);
-        free(data);
-        if (errno==EINTR && flag)
-            return -2;
-        return -1;
+        if (errno == EINTR)
+            return (-2);
+        else
+            return (-1);
     }
-    fprintf(stderr, "data being sent to child: %s", data);
-    free(data);
-    return 0;
-
+    if (write(pipe[1], "\n", 1) == -1)
+    {
+        perror(ERR_WRITE);
+        if (errno == EINTR)
+            return (-2);
+        else
+            return (-1);
+    }
     return 0;
 }
 
@@ -69,19 +67,23 @@ int loop(int pipe1[2], int pipe2[2])
             free(otherimg);
             return (-1);
         } else if (ret == 0) {
+            //send_path("h",pipe1);
+            //send_path("h",pipe2);
             cont = false;
         }
 
         if (first) {
-            fprintf(stderr, "otherimg to child1 : %s\n", otherimg);
+            fprintf(stderr, "otherimg to child1 : %s , left %d\n", otherimg,to_handle);
             ret = send_path(otherimg, pipe1);
             first = false;
+            
         } else {
             fprintf(stderr, "otherimg to child2 : %s \n", otherimg);
             ret = send_path(otherimg, pipe2);
             first = true;
+            
         }
-
+        to_handle++; //!!
         free(otherimg);
 
         if (ret < 0)
@@ -161,10 +163,15 @@ int main(int argc, char* argv[])
         return (-2);
     }
 
+    
+    while(to_handle){pause();}//printf("   left : %d\n", to_handle);}    
+
     close(pipe1[0]);
     close(pipe1[1]);
     close(pipe2[0]);
     close(pipe2[1]);
+
+    
 
     if (waitpid(pid1, NULL, 0) == -1){
         handle_error(pid1, pid2, -1, -1, -1, -1, baseimg, shared_mem);

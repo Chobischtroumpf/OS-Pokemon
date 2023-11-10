@@ -39,6 +39,7 @@ typedef struct img_dist{
 extern int flag;
 extern sem_t sem_memoire_partagee;
 extern bool first;
+extern int to_handle;
 
 /*
 ** handle_error.c

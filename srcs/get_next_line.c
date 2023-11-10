@@ -76,6 +76,8 @@ int			get_next_line(int fd, char **line)
 	ret = ft_strchr_pos(buf[fd], '\n') + 1;
 	if (buf[fd][0] == 0)
 		return (0);
+
+		
 	while (buf[fd][ret] != '\0' && ret)
 		buf[fd][i++] = buf[fd][ret++];
 	buf[fd][i] = '\0';

@@ -10,6 +10,8 @@ void        sig_handler(int signum){
     } else if(signum == SIGINT) {
         flag |= FLAG_INT;
         printf("SIGINT\n");
+    } else if (signum == SIGUSR1 || SIGUSR2){
+        to_handle--;
     }
 }
 
@@ -18,9 +20,13 @@ void        set_sighandler(bool child)
     sigaction(SIGTERM, &(struct sigaction){.sa_handler = sig_handler, .sa_flags = 0}, NULL);
     sigaction(SIGPIPE, &(struct sigaction){.sa_handler = sig_handler, .sa_flags = 0}, NULL);
     if (!child)
-        sigaction(SIGINT, &(struct sigaction){.sa_handler = sig_handler, .sa_flags = 0}, NULL);
+        {sigaction(SIGINT, &(struct sigaction){.sa_handler = sig_handler, .sa_flags = 0}, NULL);
+        sigaction(SIGUSR1, &(struct sigaction){.sa_handler = sig_handler, .sa_flags = 0}, NULL);
+        sigaction(SIGUSR2, &(struct sigaction){.sa_handler = sig_handler, .sa_flags = 0}, NULL);}
     else 
         sigaction(SIGINT, &(struct sigaction){.sa_handler = SIG_IGN, .sa_flags = 0}, NULL);
+        
+
 }
 
 void        sig_err_msg(char *msg)

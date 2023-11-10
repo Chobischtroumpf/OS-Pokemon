@@ -39,6 +39,7 @@ void    fils(char *baseimg, int pipe[2], t_img_dist *shared_mem)
     char *otherimg;
     int tempval;
     int ret = 0;
+    //char *end ="h";
     bool cont = true;
 
     set_sighandler(true);
@@ -66,9 +67,12 @@ void    fils(char *baseimg, int pipe[2], t_img_dist *shared_mem)
             perror(strerror(errno));
             ret = -1;
             break;
-        } else if (tempval == 0){
+        
+        }  
+        else if (tempval == 0 ){
             break;
         }
+        
 
         tempval = exec_img_dist(baseimg, otherimg);
         if (tempval == -2)
@@ -88,7 +92,7 @@ void    fils(char *baseimg, int pipe[2], t_img_dist *shared_mem)
             ret = -1;
             break;
         }
-
+        kill(getppid(),SIGUSR1);
         free(otherimg);
     }
     free(otherimg);
