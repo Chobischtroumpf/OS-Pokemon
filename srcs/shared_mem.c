@@ -3,7 +3,7 @@
 
 /*
 ** templated function to create the shared memory
-** will contain an int and a path
+** contains an integer and a path
 ** sets the necessary flags and intialises the two variables
 ** returns the pointer
 ** returns NULL if mmap fails
@@ -26,7 +26,7 @@ t_img_dist  *create_shared_memory(size_t size)
 /*
 ** changes the values saved in the shared memory
 ** semaphore guarantees only one process at the time has access
-** if the new distance is smaller than the one saved, changes it and saves the path
+** if the new distance is smaller than the one saved, sets it as the new one and saves the path
 ** returns 0
 ** returns -1 if error 
 */

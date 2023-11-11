@@ -14,6 +14,14 @@ short flag = 0;
 int to_handle = 0;
 // bool first = true;
 
+
+
+/*
+** sends path to child using write()
+** returns 0
+** returns -2 if interruption
+** returns -1 if error
+*/
 int send_path(char *otherimg, int pipe[2])
 {
     if (write(pipe[1], otherimg, strlen(otherimg)) == -1){
@@ -97,10 +105,15 @@ int loop(int pipe1[2], int pipe2[2], pid_t enfant1, pid_t enfant2)
 
 /*
 ** Program's main function
-** Initialises variables such as the pids of each child and the pipes
+** Initialises variables 
 ** creates the children processes and the shared memory segment
 ** runs the loop function and handles its return value
-** waits for all the images to be treated before closing the pipes and waiting for the end of the child processes, showing the result and freeing all used ressources
+** waits for all the images to be treated before closing the pipes and waiting for the end of the child processes, 
+** prints the result
+** frees all used ressources
+** returns 0
+** returns -2 if signal occured
+** returns -1 if error occured
 */
 
 int main(int argc, char* argv[])
