@@ -34,6 +34,9 @@
 #define ERR_WRITE "Error: write "
 #define ERR_WAIT "Error: wait/waitpid "
 
+/*
+** structure for shared memory
+*/
 typedef struct img_dist{
     int dist;
     char path[1000];

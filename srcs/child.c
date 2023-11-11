@@ -1,6 +1,16 @@
 #include "img_search.h"
 
 
+/* 
+** creates another process to execute img-dist to compare images
+** child process waits for the end of the execution of its child
+** returns the value returned by img-dist
+** grandchild returns -1 if an error occured 
+** retuns -2 if an interruption occurs
+** returns -1 if an error occured in waitpid()
+** returns 65 if another error occurs
+*/
+
 int     exec_img_dist(char *baseimg, char *otherimg)
 {
     pid_t pid;
@@ -32,6 +42,16 @@ int     exec_img_dist(char *baseimg, char *otherimg)
     }
     return ret;
 }
+
+
+/*
+** main function of child process
+** in a loop, gets the next path through the pipe and runs exec_img_dist  
+** writes the result in the shared memory if it passes the condition
+** return -2 if an interruption occured in get_next_line() or exec_img_dist()
+** returns -1 in case of any other error 
+** decrements images let to handle
+*/
 
 void    fils(char *baseimg, int pipe, t_img_dist *shared_mem, bool first)
 {

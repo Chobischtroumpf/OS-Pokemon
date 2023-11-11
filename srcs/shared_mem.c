@@ -1,5 +1,13 @@
 #include "img_search.h"
 
+
+/*
+** templated function to create the shared memory
+** will contain an int and a path
+** sets the necessary flags and intialises the two variables
+** returns the pointer
+** returns NULL if mmap fails
+*/
 t_img_dist  *create_shared_memory(size_t size)
 {
     t_img_dist *shared_memory;
@@ -15,6 +23,13 @@ t_img_dist  *create_shared_memory(size_t size)
     return shared_memory;
 }
 
+/*
+** changes the values saved in the shared memory
+** semaphore guarantees only one process at the time has access
+** if the new distance is smaller than the one saved, changes it and saves the path
+** returns 0
+** returns -1 if error 
+*/
 int         set_shared_memory(t_img_dist *shared_mem, int dist, char *path)
 {
     if (sem_wait(&sem_memoire_partagee) == -1)

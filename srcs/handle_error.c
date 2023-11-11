@@ -1,5 +1,12 @@
 #include "img_search.h"
 
+
+/*
+** handles eventual errors
+** terminates the children if they exist
+** closes pipes if they exist
+** frees the shared memory and destroys the semaphore
+*/
 void    handle_error(pid_t child1, pid_t child2, int read_child1, int write_child1, int read_child2, int write_child2, char *baseimg, t_img_dist *shared_mem)
 {
     if (child1 != -1)

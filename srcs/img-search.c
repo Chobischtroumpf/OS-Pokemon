@@ -95,6 +95,14 @@ int loop(int pipe1[2], int pipe2[2], pid_t enfant1, pid_t enfant2)
     return ret;
 }
 
+/*
+** Program's main function
+** Initialises variables such as the pids of each child and the pipes
+** creates the children processes and the shared memory segment
+** runs the loop function and handles its return value
+** waits for all the images to be treated before closing the pipes and waiting for the end of the child processes, showing the result and freeing all used ressources
+*/
+
 int main(int argc, char* argv[])
 {
     t_img_dist *shared_mem;
@@ -105,7 +113,7 @@ int main(int argc, char* argv[])
     int pipe2[2];
     int loop_ret;
 
-    if (argc != 2){
+    if (argc != 2){                                         // verifies if the right ammount of arguments has been given
         printf("Usage: %s <path to file>\n", argv[0]);
         return 1;
     }

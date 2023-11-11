@@ -1,5 +1,9 @@
 #include "img_search.h"
 
+
+/*
+** sets the flag according to the signal
+*/
 void        sig_handler(int signum){
     if(signum == SIGTERM) {
         flag |= FLAG_TERM;
@@ -13,6 +17,10 @@ void        sig_handler(int signum){
     }
 }
 
+
+/*
+** Decrements the variable showing how many images left to handle
+*/
 void sig_handle_usr(int signum){
     if (signum == SIGUSR1){
         to_handle--;
@@ -23,6 +31,13 @@ void sig_handle_usr(int signum){
     
 }
 
+
+/*
+** sets signal handlers of:
+** - all processes
+** - parent
+** - child
+*/
 void        set_sighandler(bool child)
 {
     sigaction(SIGTERM, &(struct sigaction){.sa_handler = sig_handler, .sa_flags = 0}, NULL);
@@ -35,6 +50,9 @@ void        set_sighandler(bool child)
         sigaction(SIGINT, &(struct sigaction){.sa_handler = SIG_IGN, .sa_flags = 0}, NULL);
 }
 
+/*
+** shows error message
+*/
 void        sig_err_msg(char *msg)
 {
     if (msg != NULL)
